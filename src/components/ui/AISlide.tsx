@@ -10,7 +10,7 @@ interface Props {
 const AI_FEATURES = [
     { icon: 'mic-outline'       as const, label: 'Chấm điểm phát âm tức thì'           },
     { icon: 'analytics-outline' as const, label: 'Phân tích điểm yếu & gợi ý cải thiện' },
-    { icon: 'repeat-outline'    as const, label: 'Flashcard thông minh theo lộ trình'    },
+    { icon: 'repeat-outline'    as const, label: 'Flashcard thông minh '    },
 ];
 
 export default function AISlide({ onDone }: Props) {

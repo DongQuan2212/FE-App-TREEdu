@@ -44,22 +44,22 @@ export default function WelcomeSlide({ onNext }: Props) {
                     }}
                 />
 
-                <SafeAreaView style={{ flex: 1, justifyContent: 'flex-end', paddingHorizontal: 28, paddingBottom: 40 }}>
+                <SafeAreaView style={{ flex: 1, justifyContent: 'flex-end', paddingHorizontal: 28, paddingBottom: 50 }}>
 
                     {/* Tiêu đề */}
                     <Animated.Text
                         style={{
                             opacity: titleAnim,
                             transform: [{ translateY: titleTransY }],
-                            fontSize: 30,
+                            fontSize: 42,
                             fontWeight: '800',
                             color: '#FFFFFF',
-                            lineHeight: 38,
+                            lineHeight: 48,
                             marginBottom: 12,
                         }}
                     >
                         Cảm ơn bạn{'\n'}đã chọn{' '}
-                        <Text style={{ color: '#A8D96C' }}>TREEdu</Text>!
+                        <Text style={{ color: '#A8D96C' }}>TREEdu !</Text>
                     </Animated.Text>
 
                     {/* Mô tả */}

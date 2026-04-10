@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, ScrollView, StatusBar, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, StatusBar, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -24,6 +24,10 @@ export default function FlashcardScreen() {
         showSortMenu,  setShowSortMenu,
         closeMenus,
         filtered,
+        loading,
+        error,
+        refreshing,
+        refresh,
     } = useFlashcardFilter();
 
     const currentLevel = LEVEL_OPTIONS.find(o => o.value === level)?.label ?? 'Cấp độ';
@@ -40,6 +44,14 @@ export default function FlashcardScreen() {
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
                 onScrollBeginDrag={closeMenus}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={refresh}
+                        colors={['#7CB342']}
+                        tintColor="#7CB342"
+                    />
+                }
             >
                 {/* ── Header ── */}
                 <View className="flex-row justify-between items-start mb-5">
@@ -48,7 +60,10 @@ export default function FlashcardScreen() {
                             Thư viện Flashcard
                         </Text>
                         <Text className="text-[13px] text-gray-400">
-                            {filtered.length} bộ thẻ từ vựng có sẵn.
+                            {loading
+                                ? 'Đang tải...'
+                                : `${filtered.length} bộ thẻ từ vựng có sẵn.`
+                            }
                         </Text>
                     </View>
 
@@ -104,27 +119,44 @@ export default function FlashcardScreen() {
                 {/* ── Divider ── */}
                 <View className="h-px bg-gray-200 mb-4" />
 
-                {/* ── Grid 2 cột ── */}
-                {filtered.length === 0 && type === 'SYSTEM' ? (
-                    <EmptyState icon="layers-outline" message="Không tìm thấy bộ flashcard nào." />
-                ) : (
-                    <View className="flex-row flex-wrap justify-between">
-                        {/* Card tạo mới — ẩn khi đang lọc SYSTEM */}
-                        {type !== 'SYSTEM' && (
-                            <CreateCard onPress={() => router.push('/flashcard/create' as any)} />
-                        )}
-
-                        {filtered.map(card => (
-                            <FlashcardCard
-                                key={card.id}
-                                card={card}
-                                onPress={(id) => {
-                                    closeMenus();
-                                    router.push(`/flashcard/detail/${id}` as any);
-                                }}
-                            />
-                        ))}
+                {/* ── Loading ── */}
+                {loading && (
+                    <View className="items-center justify-center py-20">
+                        <ActivityIndicator size="large" color="#7CB342" />
+                        <Text className="text-gray-400 text-[13px] mt-3">
+                            Đang tải danh sách flashcard...
+                        </Text>
                     </View>
+                )}
+
+                {/* ── Error ── */}
+                {!loading && error && (
+                    <EmptyState icon="wifi-outline" message={error} />
+                )}
+
+                {/* ── Grid 2 cột ── */}
+                {!loading && !error && (
+                    filtered.length === 0 && type === 'SYSTEM' ? (
+                        <EmptyState icon="layers-outline" message="Không tìm thấy bộ flashcard nào." />
+                    ) : (
+                        <View className="flex-row flex-wrap justify-between">
+                            {/* Card tạo mới — ẩn khi đang lọc SYSTEM */}
+                            {type !== 'SYSTEM' && (
+                                <CreateCard onPress={() => router.push('/flashcard/create' as any)} />
+                            )}
+
+                            {filtered.map(card => (
+                                <FlashcardCard
+                                    key={card.id}
+                                    card={card}
+                                    onPress={(id) => {
+                                        closeMenus();
+                                        router.push(`/flashcard/${id}` as any);
+                                    }}
+                                />
+                            ))}
+                        </View>
+                    )
                 )}
 
                 <View className="h-5" />

@@ -25,7 +25,7 @@ const FEATURES = [
         desc: 'Ôn luyện đa dạng\nvới chấm điểm tự động',
         btnText: 'Làm ngay',
         btnColor: '#22C55E',
-        route: '/(tabs)/quiz',
+        route: '/tabs/quiz',
     },
     {
         id: 'flashcard',
@@ -35,7 +35,7 @@ const FEATURES = [
         desc: 'Ghi nhớ từ vựng\ntheo chu kỳ lặp lại',
         btnText: 'Tạo bộ từ',
         btnColor: '#3B82F6',
-        route: '/(tabs)/flashcard',
+        route: '/tabs/flashcard',
     },
     {
         id: 'pronunciation',
@@ -45,7 +45,7 @@ const FEATURES = [
         desc: 'Luyện nói chuẩn\nnhận điểm tức thì',
         btnText: 'Luyện nói',
         btnColor: '#A855F7',
-        route: '/(tabs)/pronunciation',
+        route: '/tabs/pronunciation',
     },
 ];
 
