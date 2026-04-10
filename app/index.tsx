@@ -18,9 +18,6 @@ export default function IndexScreen() {
         );
     }
 
-    // ── 2. Chưa xem onboarding → hiện 3 slides ───────────
-    // Khi nhấn BẮT ĐẦU: completeOnboarding() lưu AsyncStorage
-    // → hasSeenOnboarding thành true → re-render → xuống case 3
     if (!hasSeenOnboarding) {
         return <OnboardingScreen onDone={completeOnboarding} />;
     }

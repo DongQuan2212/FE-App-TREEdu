@@ -26,8 +26,8 @@ export default function SplashSlide({ onNext }: Props) {
                 <Animated.View style={{ opacity, transform: [{ scale }] }}>
                     {/* TODO: thay bằng logo thật */}
                     <Image
-                        source={require('../../../assets/images/logo1.png')}
-                        style={{ width: 200, height: 80 }}
+                        source={require('../../../assets/images/betre-logo.png')}
+                        style={{ width: 600, height: 700 }}
                         resizeMode="contain"
                     />
                 </Animated.View>

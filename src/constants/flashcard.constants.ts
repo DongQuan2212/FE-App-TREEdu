@@ -1,4 +1,4 @@
-import { Flashcard } from '../types/flashcard.types';
+import { Flashcard } from '../types/flashcard';
 
 export const LEVEL_CONFIG: Record<number, { bg: string; text: string }> = {
     1: { bg: '#DCFCE7', text: '#15803D' },

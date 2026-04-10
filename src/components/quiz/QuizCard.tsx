@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Quiz } from '../../types/quiz.types';
+import { Quiz } from '../../types/quiz';
 import { LEVEL_CONFIG } from '../../constants/quiz.constants';
 
 interface Props {

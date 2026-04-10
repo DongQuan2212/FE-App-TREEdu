@@ -1,4 +1,4 @@
-import { Quiz } from '../types/quiz.types';
+import { Quiz } from '../types/quiz';
 
 export const LEVEL_CONFIG: Record<number, { bg: string; text: string }> = {
     1: { bg: '#DCFCE7', text: '#15803D' },
@@ -24,14 +24,4 @@ export const LEVEL_OPTIONS = [
     { value: '4',   label: 'Level 4' },
     { value: '5',   label: 'Level 5' },
     { value: '6',   label: 'Level 6' },
-];
-
-// ── Mock data — thay bằng API sau ─────────────────────────
-export const MOCK_QUIZZES: Quiz[] = [
-    { id: '1', title: 'Các Loại Kiểm Thử Phần Mềm',                 topic: 'Kiểm thử',   level: 4, questionCount: 10, timer: 10 },
-    { id: '2', title: 'Ôn tập tiếng việt',                           topic: 'Tiếng Việt', level: 1, questionCount: 10, timer: 60 },
-    { id: '3', title: 'Quiz Điền Từ: Khám Phá Thế Giới Xung Quanh', topic: 'Điền câu',   level: 3, questionCount: 10, timer: 20 },
-    { id: '4', title: 'Ngữ pháp cơ bản',                             topic: 'Ngữ pháp',   level: 2, questionCount: 15, timer: 30 },
-    { id: '5', title: 'Từ vựng nâng cao',                            topic: 'Từ vựng',    level: 5, questionCount: 20, timer: 45 },
-    { id: '6', title: 'Phát âm thanh điệu',                          topic: 'Phát âm',    level: 2, questionCount: 12, timer: 25 },
 ];
