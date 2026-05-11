@@ -1,15 +1,19 @@
+// app/tabs/pronunciation.tsx
 import React from 'react';
-import { ScrollView, View, Text, StatusBar } from 'react-native';
+import {
+    ScrollView, View, Text, StatusBar,
+    ActivityIndicator, RefreshControl,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { useRouter }    from 'expo-router';
+import { Ionicons }     from '@expo/vector-icons';
 
 import { usePronunciationFilter } from '@/src/hooks/usePronunciationFilter';
-import { SORT_OPTIONS } from '@/src/constants/pronunciation.constants';
-import SearchBar       from '../../src/components/ui/SearchBar';
-import FilterDropdown  from '../../src/components/ui/FilterDropdown';
-import TopicCard       from '../../src/components/pronunciation/TopicCard';
-import EmptyState      from '../../src/components/ui/EmptyState';
+import { SORT_OPTIONS }           from '@/src/constants/pronunciation.constants';
+import SearchBar                  from '../../src/components/ui/SearchBar';
+import FilterDropdown             from '../../src/components/ui/FilterDropdown';
+import TopicCard                  from '../../src/components/pronunciation/TopicCard';
+import EmptyState                 from '../../src/components/ui/EmptyState';
 
 const LEVEL_OPTIONS = [
     { value: 'all', label: 'Tất cả' },
@@ -28,33 +32,50 @@ export default function PronunciationScreen() {
         showSortMenu,  setShowSortMenu,
         closeMenus,
         filtered,
+        loading,
+        error,
+        refreshing,
+        refresh,
     } = usePronunciationFilter();
 
     const currentLevel = LEVEL_OPTIONS.find(o => o.value === level)?.label ?? 'Cấp độ';
-    const currentSort  = SORT_OPTIONS.find(o => o.value === sortBy)?.label ?? 'Sắp xếp';
+    const currentSort  = SORT_OPTIONS.find(o => o.value === sortBy)?.label  ?? 'Sắp xếp';
 
-    const handleStart = (name: string) => {
+    const handleStart = (topicName: string) => {
         closeMenus();
-        router.push(`/pronunciation-practice/${encodeURIComponent(name)}` as any);
+        // Truyền tên topic qua route — decode ở màn hình detail
+        router.push(`/pronunciation/${encodeURIComponent(topicName)}` as any);
     };
 
     return (
         <SafeAreaView className="flex-1 bg-[#FAFAFA]">
             <StatusBar barStyle="dark-content" backgroundColor="#FAFAFA" />
+
             <ScrollView
                 className="flex-1"
                 contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 24 }}
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
                 onScrollBeginDrag={closeMenus}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={refresh}
+                        colors={['#A855F7']}
+                        tintColor="#A855F7"
+                    />
+                }
             >
                 {/* ── Header ── */}
                 <View className="mb-5">
-                    <Text className="text-[26px] font-extrabold text-gray-900 tracking-tight mb-1.5">
+                    <Text className="text-[28px] font-extrabold text-gray-900 tracking-tight mb-1">
                         Luyện tập phát âm
                     </Text>
-                    <Text className="text-[13px] text-gray-500 leading-5">
-                        Kiểm tra và cải thiện khả năng phát âm Tiếng Việt với công nghệ AI tiên tiến
+                    <Text className="text-[13px] text-gray-400 leading-5">
+                        {loading
+                            ? 'Đang tải...'
+                            : `${filtered.length} chủ đề · Công nghệ AI tiên tiến`
+                        }
                     </Text>
                 </View>
 
@@ -94,23 +115,37 @@ export default function PronunciationScreen() {
                     </View>
                 </View>
 
-                {/* ── Divider + count ── */}
-                <View className="flex-row items-center gap-2.5 mb-4">
-                    <View className="flex-1 h-px bg-gray-200" />
-                    <Text className="text-xs text-gray-400 font-medium shrink-0">
-                        {filtered.length} chủ đề
-                    </Text>
-                </View>
+                {/* ── Divider ── */}
+                <View className="h-px bg-gray-200 mb-4" />
+
+                {/* ── Loading ── */}
+                {loading && (
+                    <View className="items-center justify-center py-20">
+                        <ActivityIndicator size="large" color="#A855F7" />
+                        <Text className="text-gray-400 text-[13px] mt-3">Đang tải chủ đề...</Text>
+                    </View>
+                )}
+
+                {/* ── Error ── */}
+                {!loading && error && (
+                    <EmptyState icon="wifi-outline" message={error} />
+                )}
 
                 {/* ── Topic Grid ── */}
-                {filtered.length === 0 ? (
-                    <EmptyState icon="mic-off-outline" message="Không tìm thấy chủ đề phù hợp." />
-                ) : (
-                    <View className="flex-row flex-wrap justify-between">
-                        {filtered.map(topic => (
-                            <TopicCard key={topic.id} topic={topic} onPress={handleStart} />
-                        ))}
-                    </View>
+                {!loading && !error && (
+                    filtered.length === 0
+                        ? <EmptyState icon="mic-off-outline" message="Không tìm thấy chủ đề phù hợp." />
+                        : (
+                            <View className="flex-row flex-wrap justify-between">
+                                {filtered.map(topic => (
+                                    <TopicCard
+                                        key={topic.id}
+                                        topic={topic}
+                                        onPress={handleStart}
+                                    />
+                                ))}
+                            </View>
+                        )
                 )}
 
                 <View className="h-5" />

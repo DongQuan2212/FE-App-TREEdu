@@ -206,7 +206,10 @@ export default function LoginScreen() {
                         }
 
                         {/* ── Quên mật khẩu ── */}
-                        <TouchableOpacity className="self-end mb-6">
+                        <TouchableOpacity
+                            className="self-end mb-6"
+                            onPress={() => router.push('/forgot-password')} // ← Thêm dòng này (đổi tên route cho khớp với project của bạn)
+                        >
                             <Text className="text-[13px] font-semibold text-[#7CB342]">
                                 Quên mật khẩu?
                             </Text>

@@ -18,7 +18,7 @@ export const MENU_SECTIONS: MenuSection[] = [
                 icon:    'time-outline',
                 label:   'Lịch sử học tập',
                 sub:     'Các lần làm bài quiz',
-                route:   '/profile/quiz-history',
+                route:   '/quiz/history',
                 color:   '#22C55E',
                 bgColor: '#F0FDF4',
             },

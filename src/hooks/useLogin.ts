@@ -1,9 +1,11 @@
-import { useState } from 'react';
-import { Alert } from 'react-native';
-import { useRouter } from 'expo-router';
-import { API_ENDPOINTS } from '../constants/api';
-import { useAuth } from '../context/AuthContext';
-import type { LoginFormErrors, LoginResponse } from '../types/auth';
+// src/hooks/useLogin.ts
+import { useState }   from 'react';
+import { Alert }      from 'react-native';
+import { useRouter }  from 'expo-router';
+
+import { loginApi }             from '../constants/authApi';
+import { useAuth }              from '../context/AuthContext';
+import type { LoginFormErrors } from '../types/auth';
 
 export function useLogin() {
     const router    = useRouter();
@@ -18,61 +20,65 @@ export function useLogin() {
     const clearError = (field: keyof LoginFormErrors) =>
         setErrors((prev) => ({ ...prev, [field]: undefined }));
 
+    // ── Validate ─────────────────────────────────────────────────────────────
     const validate = (): boolean => {
         const newErrors: LoginFormErrors = {};
+
         if (!email.trim()) {
             newErrors.email = 'Vui lòng nhập email';
         } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
             newErrors.email = 'Email không hợp lệ';
         }
+
         if (!password) {
             newErrors.password = 'Vui lòng nhập mật khẩu';
         }
+
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
 
+    // ── Handle login ──────────────────────────────────────────────────────────
     const handleLogin = async () => {
         if (!validate()) return;
 
         setLoading(true);
         try {
-            const loginRes = await fetch(API_ENDPOINTS.login, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    email: email.trim().toLowerCase(),
-                    password,
-                }),
+            const res = await loginApi({
+                email:    email.trim().toLowerCase(),
+                password,
             });
 
-            const loginData: LoginResponse = await loginRes.json();
-
-            if (!loginRes.ok || loginData.statusCode !== 200) {
+            if (res.statusCode !== 200 || !res.data) {
                 Alert.alert(
                     'Đăng nhập thất bại',
-                    loginData?.message ?? 'Email hoặc mật khẩu không đúng.'
+                    res.message ?? 'Email hoặc mật khẩu không đúng.',
                 );
                 return;
             }
 
-            // login() sẽ: saveToken + gọi current-user + setUser global
-            await login(loginData.data);
+            // Lưu token + fetch user → cập nhật AuthContext
+            await login(res.data);
 
+            // Dùng replace để không thể back về màn login
             router.replace('/tabs/home' as any);
 
-        } catch {
-            Alert.alert('Không thể kết nối', 'Vui lòng kiểm tra kết nối mạng.');
+        } catch (error: any) {
+            const backendMsg = error?.response?.data?.message;
+            Alert.alert(
+                'Đăng nhập thất bại',
+                backendMsg ?? 'Vui lòng kiểm tra kết nối mạng.',
+            );
         } finally {
             setLoading(false);
         }
     };
 
     return {
-        email, setEmail,
-        password, setPassword,
+        email,        setEmail,
+        password,     setPassword,
         showPassword, setShowPass,
-        loading, errors,
-        clearError, handleLogin,
+        loading,      errors,
+        clearError,   handleLogin,
     };
 }

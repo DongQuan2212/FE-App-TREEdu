@@ -1,70 +1,178 @@
-import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+// src/components/quiz/QuizCard.tsx — Premium redesign
+import React, { useRef } from 'react';
+import { View, Text, TouchableOpacity, Animated, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Quiz } from '../../types/quiz';
 import { LEVEL_CONFIG } from '../../constants/quiz.constants';
 
 interface Props {
-    quiz: Quiz;
+    quiz:    Quiz;
     onPress: (id: string) => void;
 }
 
 export default function QuizCard({ quiz, onPress }: Props) {
-    const lv = LEVEL_CONFIG[quiz.level] ?? { bg: '#F4F4F5', text: '#71717A' };
+    const lv    = LEVEL_CONFIG[quiz.level] ?? { bg: '#F4F4F5', text: '#71717A' };
+    const scale = useRef(new Animated.Value(1)).current;
+
+    const handlePressIn = () =>
+        Animated.spring(scale, { toValue: 0.97, useNativeDriver: true, speed: 40, bounciness: 4 }).start();
+
+    const handlePressOut = () =>
+        Animated.spring(scale, { toValue: 1,    useNativeDriver: true, speed: 20, bounciness: 6 }).start();
 
     return (
-        <TouchableOpacity
-            className="bg-white border border-gray-200 rounded-2xl p-[18px] mb-2.5"
-            activeOpacity={0.80}
-            onPress={() => onPress(quiz.id)}
-        >
-            {/* ── Top row: topic + level ── */}
-            <View className="flex-row justify-between items-center mb-2.5">
-                <View className="flex-row items-center gap-1.5 bg-gray-100 px-2.5 py-1 rounded-md max-w-[55%]">
-                    <Ionicons name="pricetag-outline" size={11} color="#6B7280" />
-                    <Text className="text-[11px] text-gray-500 font-medium" numberOfLines={1}>
-                        {quiz.topic}
-                    </Text>
+        <Animated.View style={[styles.wrapper, { transform: [{ scale }] }]}>
+            <TouchableOpacity
+                style={styles.card}
+                activeOpacity={1}
+                onPress={() => onPress(quiz.id)}
+                onPressIn={handlePressIn}
+                onPressOut={handlePressOut}
+            >
+                {/* ── Top row: topic badge + level badge ── */}
+                <View style={styles.topRow}>
+                    <View style={styles.topicBadge}>
+                        <Ionicons name="pricetag-outline" size={11} color="#6B7280" />
+                        <Text style={styles.topicText} numberOfLines={1}>{quiz.topic}</Text>
+                    </View>
+                    <View style={[styles.levelBadge, { backgroundColor: lv.bg }]}>
+                        <Text style={[styles.levelText, { color: lv.text }]}>LV {quiz.level}</Text>
+                    </View>
                 </View>
 
-                <View
-                    className="px-2.5 py-1 rounded-md"
-                    style={{ backgroundColor: lv.bg }}
-                >
-                    <Text
-                        className="text-[11px] font-extrabold tracking-wide"
-                        style={{ color: lv.text }}
-                    >
-                        LV {quiz.level}
-                    </Text>
-                </View>
-            </View>
+                {/* ── Title ── */}
+                <Text style={styles.title} numberOfLines={2}>{quiz.title}</Text>
 
-            {/* ── Title ── */}
-            <Text className="text-base font-bold text-gray-900 leading-6 mb-2.5" numberOfLines={2}>
-                {quiz.title}
-            </Text>
+                {/* ── Meta ── */}
+                <View style={styles.metaRow}>
+                    <View style={styles.metaItem}>
+                        <Ionicons name="help-circle-outline" size={13} color="#9CA3AF" />
+                        <Text style={styles.metaText}>{quiz.questionCount} câu</Text>
+                    </View>
+                    <View style={styles.metaDot} />
+                    <View style={styles.metaItem}>
+                        <Ionicons name="time-outline" size={13} color="#9CA3AF" />
+                        <Text style={styles.metaText}>{quiz.timer} phút</Text>
+                    </View>
+                </View>
 
-            {/* ── Meta: câu hỏi + thời gian ── */}
-            <View className="flex-row items-center gap-2 mb-3.5">
-                <View className="flex-row items-center gap-1">
-                    <Ionicons name="help-circle-outline" size={13} color="#9CA3AF" />
-                    <Text className="text-xs text-gray-400 font-medium">{quiz.questionCount} câu</Text>
+                {/* ── Footer ── */}
+                <View style={styles.footer}>
+                    <Text style={styles.footerLabel}>Làm bài ngay</Text>
+                    <View style={styles.arrowBtn}>
+                        <Ionicons name="arrow-forward" size={14} color="#5A8A2E" />
+                    </View>
                 </View>
-                <View className="w-[3px] h-[3px] rounded-full bg-gray-300" />
-                <View className="flex-row items-center gap-1">
-                    <Ionicons name="time-outline" size={13} color="#9CA3AF" />
-                    <Text className="text-xs text-gray-400 font-medium">{quiz.timer} phút</Text>
-                </View>
-            </View>
-
-            {/* ── Footer ── */}
-            <View className="flex-row justify-between items-center border-t border-gray-50 pt-3">
-                <Text className="text-xs font-semibold text-gray-400">Kiểm tra ngay</Text>
-                <View className="w-[30px] h-[30px] rounded-full bg-gray-100 items-center justify-center">
-                    <Ionicons name="arrow-forward" size={14} color="#6B7280" />
-                </View>
-            </View>
-        </TouchableOpacity>
+            </TouchableOpacity>
+        </Animated.View>
     );
 }
+
+const styles = StyleSheet.create({
+    wrapper: {
+        marginBottom: 10,
+        borderRadius: 20,
+        ...Platform.select({
+            ios:     { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3 },
+            android: { elevation: 3 },
+        }),
+    },
+    card: {
+        backgroundColor: '#FFFFFF',
+        borderRadius:    20,
+        paddingHorizontal: 18,
+        paddingVertical:   16,
+        overflow:          'hidden',
+    },
+
+    // ── Top row ────────────────────────────────────────────
+    topRow: {
+        flexDirection:  'row',
+        alignItems:     'center',
+        justifyContent: 'space-between',
+        marginBottom:   10,
+    },
+    topicBadge: {
+        flexDirection:     'row',
+        alignItems:        'center',
+        gap:               5,
+        backgroundColor:   '#F3F4F6',
+        borderRadius:      8,
+        paddingHorizontal: 10,
+        paddingVertical:   5,
+        maxWidth:          '58%',
+    },
+    topicText: {
+        fontSize:   11,
+        color:      '#6B7280',
+        fontWeight: '500',
+    },
+    levelBadge: {
+        borderRadius:      8,
+        paddingHorizontal: 10,
+        paddingVertical:   5,
+    },
+    levelText: {
+        fontSize:      11,
+        fontWeight:    '800',
+        letterSpacing: 0.4,
+    },
+
+    // ── Title ──────────────────────────────────────────────
+    title: {
+        fontSize:     17,
+        fontWeight:   '800',
+        color:        '#111111',
+        lineHeight:   24,
+        marginBottom: 8,
+        letterSpacing: -0.2,
+    },
+
+    // ── Meta ───────────────────────────────────────────────
+    metaRow: {
+        flexDirection: 'row',
+        alignItems:    'center',
+        gap:           6,
+        marginBottom:  14,
+    },
+    metaItem: {
+        flexDirection: 'row',
+        alignItems:    'center',
+        gap:           4,
+    },
+    metaText: {
+        fontSize:   12,
+        color:      '#9CA3AF',
+        fontWeight: '500',
+    },
+    metaDot: {
+        width:           3,
+        height:          3,
+        borderRadius:    1.5,
+        backgroundColor: '#D1D5DB',
+    },
+
+    // ── Footer ─────────────────────────────────────────────
+    footer: {
+        flexDirection:  'row',
+        alignItems:     'center',
+        justifyContent: 'space-between',
+        borderTopWidth: 1,
+        borderTopColor: '#F5F5F5',
+        paddingTop:     12,
+    },
+    footerLabel: {
+        fontSize:   12,
+        fontWeight: '600',
+        color:      '#C4D1B8',          // deliberately muted — focus stays on title
+        letterSpacing: 0.2,
+    },
+    arrowBtn: {
+        width:           30,
+        height:          30,
+        borderRadius:    15,
+        backgroundColor: '#EAF3DE',
+        alignItems:      'center',
+        justifyContent:  'center',
+    },
+});
