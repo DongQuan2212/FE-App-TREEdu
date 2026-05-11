@@ -1,30 +1,44 @@
-import { Topic } from '../types/pronunciation.types';
+// src/constants/pronunciation.constants.ts
+import type { Topic, TopicResponse } from '../types/pronunciation.types';
 
-// ── Level badge colors ─────────────────────────────────────
-// Dùng inline style vì NativeWind không hỗ trợ dynamic color value
+// ── Level badge colors ────────────────────────────────────────────────────────
 export const LEVEL_CONFIG: Record<number, {
-    bg: string;
-    text: string;
-    border: string;
-    areaBg: string;
+    bg:        string;
+    text:      string;
+    border:    string;
     iconColor: string;
 }> = {
-    1: { bg: '#F0FDF4', text: '#15803D', border: '#BBF7D0', areaBg: '#F0FDF4', iconColor: '#86EFAC' },
-    2: { bg: '#EFF6FF', text: '#1D4ED8', border: '#BFDBFE', areaBg: '#EFF6FF', iconColor: '#93C5FD' },
-    3: { bg: '#FFFBEB', text: '#B45309', border: '#FDE68A', areaBg: '#FFFBEB', iconColor: '#FCD34D' },
+    1: { bg: '#F0FDF4', text: '#15803D', border: '#BBF7D0', iconColor: '#4ADE80' },
+    2: { bg: '#EFF6FF', text: '#1D4ED8', border: '#BFDBFE', iconColor: '#60A5FA' },
+    3: { bg: '#FFFBEB', text: '#B45309', border: '#FDE68A', iconColor: '#FBBF24' },
 };
 
+// ── Icon map theo tên topic (khớp với web FE) ─────────────────────────────────
+export const TOPIC_ICON_MAP: Record<string, string> = {
+    'Động vật':   'paw-outline',
+    'Gia đình':   'people-outline',
+    'Trường học': 'school-outline',
+    'Thức ăn':    'restaurant-outline',
+    'Công việc':  'briefcase-outline',
+    'Du lịch':    'airplane-outline',
+};
+
+/** Lấy icon theo tên topic, fallback về layers */
+export const getTopicIcon = (name: string): string =>
+    TOPIC_ICON_MAP[name] ?? 'layers-outline';
+
+// ── Sort options ──────────────────────────────────────────────────────────────
 export const SORT_OPTIONS = [
     { value: 'name'  as const, label: 'Tên A → Z' },
-    { value: 'level' as const, label: 'Cấp độ' },
+    { value: 'level' as const, label: 'Cấp độ'    },
 ];
 
-// ── Mock data — thay bằng API call sau ────────────────────
-export const MOCK_TOPICS: Topic[] = [
-    { id: '1', name: 'Động vật',   description: 'Chủ đề về các loài vật quen thuộc. Level 1 gồm câu ngắn, từ dễ và phát âm cơ bản.',          level: 1, icon: 'paw-outline'       },
-    { id: '2', name: 'Gia đình',   description: 'Chủ đề về các thành viên trong gia đình. Level 1 gồm câu ngắn, từ dễ và phát âm.',            level: 1, icon: 'people-outline'    },
-    { id: '3', name: 'Trường học', description: 'Chủ đề về trường lớp, giáo viên và học sinh. Luyện từ vựng học đường.',                       level: 2, icon: 'school-outline'     },
-    { id: '4', name: 'Thức ăn',   description: 'Chủ đề về đồ ăn, thức uống. Level 2 dùng câu mô tả ngắn và trung bình.',                      level: 2, icon: 'restaurant-outline' },
-    { id: '5', name: 'Công việc', description: 'Chủ đề về nghề nghiệp và môi trường làm việc. Level 3 gồm câu dài, có nhiều mô tả chi tiết.', level: 3, icon: 'briefcase-outline'  },
-    { id: '6', name: 'Du lịch',   description: 'Chủ đề về trải nghiệm du lịch, nơi chốn. Level 3 gồm câu dài có nhiều mô tả.',                level: 3, icon: 'airplane-outline'   },
-];
+// ── Adapter: TopicResponse (BE) → Topic (UI) ─────────────────────────────────
+export const mapTopicResponse = (t: TopicResponse): Topic => ({
+    id:            t.id,
+    name:          t.name,
+    description:   t.description,
+    level:         Number(t.level),   // BE trả string "1"/"2"/"3" → parse number
+    icon:          getTopicIcon(t.name),
+    sentenceCount: t.sentenceCount,
+});

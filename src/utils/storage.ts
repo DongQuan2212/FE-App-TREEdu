@@ -1,33 +1,28 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { CurrentUser } from '../types/auth';
+import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
 
-const KEYS = {
-    token: 'auth_token',
-    user:  'auth_user',
+const TOKEN_KEY = 'auth_token';
+
+export const saveToken = async (token: string): Promise<void> => {
+    if (Platform.OS === 'web') {
+        localStorage.setItem(TOKEN_KEY, token);
+    } else {
+        await SecureStore.setItemAsync(TOKEN_KEY, token);
+    }
 };
 
-// ── Token ────────────────────────────────────────────────
-export const saveToken = (token: string) =>
-    AsyncStorage.setItem(KEYS.token, token);
-
-export const getToken = () =>
-    AsyncStorage.getItem(KEYS.token);
-
-export const removeToken = () =>
-    AsyncStorage.removeItem(KEYS.token);
-
-// ── User ─────────────────────────────────────────────────
-export const saveUser = (user: CurrentUser) =>
-    AsyncStorage.setItem(KEYS.user, JSON.stringify(user));
-
-export const getUser = async (): Promise<CurrentUser | null> => {
-    const raw = await AsyncStorage.getItem(KEYS.user);
-    return raw ? JSON.parse(raw) : null;
+export const getToken = async (): Promise<string | null> => {
+    if (Platform.OS === 'web') {
+        return localStorage.getItem(TOKEN_KEY);
+    } else {
+        return await SecureStore.getItemAsync(TOKEN_KEY);
+    }
 };
 
-export const removeUser = () =>
-    AsyncStorage.removeItem(KEYS.user);
-
-// ── Clear all (logout) ───────────────────────────────────
-export const clearAuth = () =>
-    AsyncStorage.multiRemove([KEYS.token, KEYS.user]);
+export const clearAuth = async (): Promise<void> => {
+    if (Platform.OS === 'web') {
+        localStorage.removeItem(TOKEN_KEY);
+    } else {
+        await SecureStore.deleteItemAsync(TOKEN_KEY);
+    }
+};

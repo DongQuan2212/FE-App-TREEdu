@@ -1,10 +1,11 @@
+// src/components/user/ProfileCard.tsx
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { User } from '../../types/profile.types';
 
 interface Props {
-    user: User;
+    user: User | null;          // ← null khi đang load
     onEdit: () => void;
     onChangePassword: () => void;
 }
@@ -39,7 +40,50 @@ function InfoRow({ icon, label, value, bold = false, showDivider = false }: Info
     );
 }
 
+// ── Skeleton khi user chưa load ───────────────────────────────────────────────
+function ProfileCardSkeleton() {
+    return (
+        <View className="bg-white border border-gray-200 rounded-2xl overflow-hidden mb-6">
+            {/* Avatar + name skeleton */}
+            <View className="flex-row items-center gap-3.5 p-5">
+                <View className="w-[60px] h-[60px] rounded-full bg-gray-100" />
+                <View className="flex-1 gap-2">
+                    <View className="h-4 w-32 bg-gray-100 rounded-full" />
+                    <View className="h-3 w-20 bg-gray-100 rounded-full" />
+                </View>
+            </View>
+
+            <View className="h-px bg-gray-100" />
+
+            {/* Info rows skeleton */}
+            <View className="px-5 py-1">
+                {[0, 1, 2].map((i) => (
+                    <View key={i} className="flex-row items-center gap-3.5 py-3.5">
+                        <View className="w-8 h-8 rounded-lg bg-gray-100" />
+                        <View className="flex-1 gap-1.5">
+                            <View className="h-2.5 w-16 bg-gray-100 rounded-full" />
+                            <View className="h-3 w-40 bg-gray-100 rounded-full" />
+                        </View>
+                    </View>
+                ))}
+            </View>
+
+            <View className="h-px bg-gray-100" />
+
+            {/* Buttons skeleton */}
+            <View className="flex-row gap-2.5 p-5">
+                <View className="flex-1 h-[46px] bg-gray-100 rounded-xl" />
+                <View className="flex-1 h-[46px] bg-gray-100 rounded-xl" />
+            </View>
+        </View>
+    );
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
 export default function ProfileCard({ user, onEdit, onChangePassword }: Props) {
+    // Hiện skeleton khi chưa có dữ liệu
+    if (!user) return <ProfileCardSkeleton />;
+
     return (
         <View className="bg-white border border-gray-200 rounded-2xl overflow-hidden mb-6">
             {/* ── Avatar + name ── */}
@@ -64,9 +108,9 @@ export default function ProfileCard({ user, onEdit, onChangePassword }: Props) {
 
             {/* ── Info rows ── */}
             <View className="px-5 py-1">
-                <InfoRow icon="mail-outline"    label="Email"    value={user.email} showDivider />
-                <InfoRow icon="person-outline"  label="Họ và tên" value={user.name} bold showDivider />
-                <InfoRow icon="shield-outline"  label="Vai trò"  value={user.role} />
+                <InfoRow icon="mail-outline"    label="Email"     value={user.email} showDivider />
+                <InfoRow icon="person-outline"  label="Họ và tên" value={user.name}  bold showDivider />
+                <InfoRow icon="shield-outline"  label="Vai trò"   value={user.role} />
             </View>
 
             <View className="h-px bg-gray-100" />

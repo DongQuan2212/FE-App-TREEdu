@@ -62,10 +62,10 @@ export function useRegister() {
 
             const data = await response.json();
 
+            // Thay đoạn này trong handleRegister:
             if (response.status === 201 || response.ok) {
-
                 router.push({
-                    pathname: '/',
+                    pathname: '/verify' as any,  // ← đổi từ '/' sang '/verify-otp'
                     params: { email: email.trim().toLowerCase() },
                 });
             } else {

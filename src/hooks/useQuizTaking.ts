@@ -1,71 +1,60 @@
+// src/hooks/useQuizTaking.ts
 import { useState, useEffect, useCallback } from 'react';
 import { Alert } from 'react-native';
-import {
+import { startQuizApi, submitQuizApi } from '../constants/quizApi';
+import type {
     QuizDetail, QuizQuestion, QuizResult,
     AnswerMap, FlagMap,
 } from '../types/quizTaking.types';
 
-// ── Mock data — thay bằng API sau ─────────────────────────
-const MOCK_QUIZ: QuizDetail = {
-    title: 'Các Loại Kiểm Thử Phần Mềm',
-    questions: [
-        {
-            questionId: 'q1',
-            content: 'Kiểm thử nào tập trung vào việc xác minh rằng các thành phần hoặc mô-đun riêng lẻ hoạt động chính xác?',
-            options: [
-                { answerId: 'a1', content: 'Kiểm thử tích hợp (Integration Test)' },
-                { answerId: 'a2', content: 'Kiểm thử hệ thống (System Test)' },
-                { answerId: 'a3', content: 'Kiểm thử đơn vị (Unit Test)' },
-                { answerId: 'a4', content: 'Kiểm thử chấp nhận (Acceptance Test)' },
-            ],
-        },
-        {
-            questionId: 'q2',
-            content: 'Phương pháp kiểm thử nào kiểm tra toàn bộ hệ thống như một tổng thể?',
-            options: [
-                { answerId: 'b1', content: 'Unit Testing' },
-                { answerId: 'b2', content: 'System Testing' },
-                { answerId: 'b3', content: 'Regression Testing' },
-                { answerId: 'b4', content: 'Smoke Testing' },
-            ],
-        },
-        {
-            questionId: 'q3',
-            content: 'Black-box testing tập trung vào điều gì?',
-            options: [
-                { answerId: 'c1', content: 'Cấu trúc bên trong của code' },
-                { answerId: 'c2', content: 'Logic thuật toán' },
-                { answerId: 'c3', content: 'Đầu vào và đầu ra mà không biết cấu trúc bên trong' },
-                { answerId: 'c4', content: 'Hiệu năng hệ thống' },
-            ],
-        },
-    ],
-};
-
 export function useQuizTaking(quizId: string) {
-    const [quiz, setQuiz]               = useState<QuizDetail | null>(null);
-    const [attemptId, setAttemptId]     = useState<string>('46898d');
-    const [currentIdx, setCurrentIdx]   = useState(0);
-    const [answers, setAnswers]         = useState<AnswerMap>({});
-    const [flags, setFlags]             = useState<FlagMap>({});
-    const [timeLeft, setTimeLeft]       = useState(0);
-    const [loading, setLoading]         = useState(true);
-    const [submitting, setSubmitting]   = useState(false);
-    const [showResult, setShowResult]   = useState(false);
-    const [result, setResult]           = useState<QuizResult | null>(null);
+    const [quiz, setQuiz]             = useState<QuizDetail | null>(null);
+    const [attemptId, setAttemptId]   = useState<string>('');
+    const [currentIdx, setCurrentIdx] = useState(0);
+    const [answers, setAnswers]       = useState<AnswerMap>({});
+    const [flags, setFlags]           = useState<FlagMap>({});
+    const [timeLeft, setTimeLeft]     = useState(0);
+    const [loading, setLoading]       = useState(true);
+    const [submitting, setSubmitting] = useState(false);
+    const [showResult, setShowResult] = useState(false);
+    const [result, setResult]         = useState<QuizResult | null>(null);
 
-    // ── Load quiz (thay bằng API) ──────────────────────────
+    // ── Gọi POST /quiz/{id}/start ────────────────────────────────────────────
     useEffect(() => {
-        setTimeout(() => {
-            setQuiz(MOCK_QUIZ);
-            setTimeLeft(10 * 60); // 10 phút
-            setLoading(false);
-        }, 800);
+        if (!quizId) return;
+
+        const startQuiz = async () => {
+            setLoading(true);
+            try {
+                const res = await startQuizApi(quizId);
+
+                setAttemptId(res.attemptId);
+                setQuiz(res.quiz);
+
+                // Dùng timeRemainingSeconds từ BE (nếu có) để resume;
+                // fallback: timer * 60 từ quiz data
+                const seconds = res.timeRemainingSeconds > 0
+                    ? res.timeRemainingSeconds
+                    : (res.quiz.timer ?? 10) * 60;
+                setTimeLeft(seconds);
+
+            } catch (error: any) {
+                const msg = error?.response?.data?.message ?? 'Không thể tải bài quiz. Vui lòng thử lại.';
+                Alert.alert('Lỗi', msg, [
+                    { text: 'OK' },
+                ]);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        startQuiz();
     }, [quizId]);
 
-    // ── Timer ──────────────────────────────────────────────
+    // ── Timer đếm ngược ──────────────────────────────────────────────────────
     useEffect(() => {
         if (loading || showResult || timeLeft <= 0) return;
+
         const timer = setInterval(() => {
             setTimeLeft(prev => {
                 if (prev <= 1) {
@@ -76,21 +65,25 @@ export function useQuizTaking(quizId: string) {
                 return prev - 1;
             });
         }, 1000);
+
         return () => clearInterval(timer);
     }, [loading, showResult, timeLeft]);
 
     const handleTimeUp = useCallback(() => {
-        Alert.alert('Hết giờ!', 'Thời gian làm bài đã kết thúc. Bài sẽ được nộp tự động.', [
-            { text: 'OK', onPress: () => submitQuiz(true) },
-        ]);
+        Alert.alert(
+            'Hết giờ!',
+            'Thời gian làm bài đã kết thúc. Bài sẽ được nộp tự động.',
+            [{ text: 'OK', onPress: () => submitQuiz(true) }],
+        );
     }, [answers]);
 
-    const formatTime = (s: number) => {
+    const formatTime = (s: number): string => {
         const min = Math.floor(s / 60).toString().padStart(2, '0');
         const sec = (s % 60).toString().padStart(2, '0');
         return `${min}:${sec}`;
     };
 
+    // ── Actions ──────────────────────────────────────────────────────────────
     const selectAnswer = (questionId: string, answerId: string) => {
         setAnswers(prev => ({ ...prev, [questionId]: answerId }));
     };
@@ -108,42 +101,50 @@ export function useQuizTaking(quizId: string) {
         if (currentIdx > 0) setCurrentIdx(i => i - 1);
     };
 
-    const submitQuiz = useCallback((isAuto = false) => {
-        if (submitting) return;
+    // ── Nộp bài — gọi POST /quiz/{id}/submit ─────────────────────────────────
+    const submitQuiz = useCallback(async (isAuto = false) => {
+        if (submitting || !quiz) return;
         setSubmitting(true);
 
-        // Mock result — thay bằng API
-        setTimeout(() => {
-            setResult({
-                score: 2,
-                totalQuestions: quiz?.questions.length ?? 0,
-                percentage: 67,
-                results: (quiz?.questions ?? []).map((q, i) => ({
-                    content: q.content,
-                    correct: i % 2 === 0,
-                    selectedAnswer: answers[q.questionId]
-                        ? q.options.find(o => o.answerId === answers[q.questionId])?.content ?? 'Không trả lời'
-                        : 'Không trả lời',
-                    correctAnswer: q.options[2]?.content ?? '',
-                    explanation: 'Đây là giải thích cho câu hỏi này.',
-                })),
+        // Map AnswerMap { questionId: answerId } → List<UserAnswerRequest>
+        const answersPayload = Object.entries(answers).map(
+            ([questionId, selectedAnswerId]) => ({ questionId, selectedAnswerId }),
+        );
+
+        try {
+            const res = await submitQuizApi(quizId, {
+                attemptId,
+                answers: answersPayload,
             });
-            setSubmitting(false);
+
+            setResult(res);
             setShowResult(true);
-        }, 1000);
-    }, [submitting, quiz, answers]);
+
+        } catch (error: any) {
+            const msg = error?.response?.data?.message ?? 'Nộp bài thất bại. Vui lòng thử lại.';
+            Alert.alert('Lỗi nộp bài', msg);
+        } finally {
+            setSubmitting(false);
+        }
+    }, [submitting, quiz, answers, attemptId, quizId]);
 
     const handleSubmit = () => {
+        const unanswered = (quiz?.questions.length ?? 0) - Object.keys(answers).length;
+        const unansweredText = unanswered > 0
+            ? `\n⚠️ Còn ${unanswered} câu chưa trả lời.`
+            : '';
+
         Alert.alert(
             'Nộp bài thi?',
-            'Hãy kiểm tra kỹ các câu hỏi đã đánh dấu trước khi nộp.',
+            `Hãy kiểm tra kỹ trước khi nộp.${unansweredText}`,
             [
                 { text: 'Kiểm tra lại', style: 'cancel' },
                 { text: 'Nộp bài', style: 'default', onPress: () => submitQuiz(false) },
-            ]
+            ],
         );
     };
 
+    // ── Làm lại — gọi lại /start để có attemptId mới ────────────────────────
     const handleRetake = () => {
         Alert.alert(
             'Làm lại bài thi?',
@@ -151,23 +152,41 @@ export function useQuizTaking(quizId: string) {
             [
                 { text: 'Hủy', style: 'cancel' },
                 {
-                    text: 'Làm lại ngay',
+                    text:  'Làm lại ngay',
                     style: 'destructive',
-                    onPress: () => {
+                    onPress: async () => {
+                        // Reset UI ngay
                         setAnswers({});
                         setFlags({});
                         setCurrentIdx(0);
                         setShowResult(false);
                         setResult(null);
-                        setTimeLeft(10 * 60);
+                        setLoading(true);
+
+                        // Gọi /start lại để lấy attemptId mới
+                        try {
+                            const res = await startQuizApi(quizId);
+                            setAttemptId(res.attemptId);
+                            setQuiz(res.quiz);
+                            const seconds = res.timeRemainingSeconds > 0
+                                ? res.timeRemainingSeconds
+                                : (res.quiz.timer ?? 10) * 60;
+                            setTimeLeft(seconds);
+                        } catch (error: any) {
+                            const msg = error?.response?.data?.message ?? 'Không thể tải lại bài quiz.';
+                            Alert.alert('Lỗi', msg);
+                        } finally {
+                            setLoading(false);
+                        }
                     },
                 },
-            ]
+            ],
         );
     };
 
-    const questions = quiz?.questions ?? [];
-    const answeredCount = Object.keys(answers).length;
+    // ── Derived state ────────────────────────────────────────────────────────
+    const questions      = quiz?.questions ?? [];
+    const answeredCount  = Object.keys(answers).length;
     const progressPercent = questions.length > 0
         ? Math.round((answeredCount / questions.length) * 100)
         : 0;
