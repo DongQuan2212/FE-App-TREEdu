@@ -39,6 +39,9 @@ export interface QuestionResult {
     correctAnswer:   string;   // content của đáp án đúng
     correct:         boolean;
     explanation:     string | null;
+    xpGained?:     number;
+    currentLevel?: number;
+    leveledUp?:    boolean;
 }
 
 // ── Quiz Detail (từ startQuiz.quiz) ──────────────────────────────────────────

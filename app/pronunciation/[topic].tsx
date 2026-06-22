@@ -1,8 +1,5 @@
 // app/pronunciation/[topic].tsx
-//
-// Màn hình luyện phát âm theo topic.
-// Flow: load câu ngẫu nhiên → ghi âm → AI chấm → hiển thị kết quả
-// ─────────────────────────────────────────────────────────────────────────────
+
 import React from 'react';
 import {
     View, Text, TouchableOpacity, ScrollView,

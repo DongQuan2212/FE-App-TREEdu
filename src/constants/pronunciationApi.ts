@@ -5,6 +5,13 @@ import type { TopicResponse, PronunciationCheckResponse } from '../types/pronunc
 
 const BASE = '/pronunciation-check';
 
+// Định nghĩa một interface chuẩn cho File trên React Native để không bị lỗi TypeScript
+export interface ReactNativeAudioFile {
+    uri: string;
+    name: string;
+    type: string;
+}
+
 /**
  * GET /api/pronunciation-check/topics
  * Lấy danh sách tất cả topic phát âm.
@@ -31,11 +38,13 @@ export const getRandomSentenceApi = async (topic: string): Promise<string> => {
  * Dùng FormData vì có file audio.
  */
 export const checkPronunciationApi = async (
-    audioBlob: Blob,
+    audioFile: ReactNativeAudioFile, // ✅ Đổi từ Blob thành ReactNativeAudioFile
     expectedText: string,
 ): Promise<PronunciationCheckResponse> => {
     const formData = new FormData();
-    formData.append('audio', audioBlob, 'recording.m4a');
+
+    // ✅ Ép kiểu 'as any' ở đây để FormData của React Native chấp nhận Object có cấu trúc {uri, name, type}
+    formData.append('audio', audioFile as any);
     formData.append('expectedText', expectedText);
 
     const { data } = await axiosClient.post<ApiResponse<PronunciationCheckResponse>>(

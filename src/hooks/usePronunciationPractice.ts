@@ -77,7 +77,6 @@ export function usePronunciationPractice(topicName: string) {
         }
     };
 
-    // ── Dừng ghi âm + gửi API ────────────────────────────────────────────────
     const stopRecording = async () => {
         if (!recordingRef.current || !recording) return;
 
@@ -86,18 +85,25 @@ export function usePronunciationPractice(topicName: string) {
 
         try {
             await recordingRef.current.stopAndUnloadAsync();
-
             const uri = recordingRef.current.getURI();
             recordingRef.current = null;
 
             if (!uri) throw new Error('No audio URI');
 
-            // Đọc file audio thành blob
-            const response  = await fetch(uri);
-            const audioBlob = await response.blob();
+            // 1. Tự động bóc tách tên file và định dạng (m4a, 3gp, wav...) từ URI
+            const filename = uri.split('/').pop() || 'audio.m4a';
+            const match = /\.(\w+)$/.exec(filename);
+            const type = match ? `audio/${match[1]}` : `audio/m4a`;
 
-            // Gửi lên BE chấm phát âm
-            const res = await checkPronunciationApi(audioBlob, sentence);
+            // 2. Tạo object file theo tiêu chuẩn của React Native
+            const audioFile = {
+                uri: uri,
+                name: filename,
+                type: type
+            };
+
+            // 3. Truyền thẳng audioFile này vào API (thay vì truyền blob)
+            const res = await checkPronunciationApi(audioFile, sentence);
             setResult(res);
 
         } catch (err: any) {
