@@ -16,6 +16,7 @@ export default function RootLayout() {
 
                 {/* ── App chính ── */}
                 <Stack.Screen name="tabs"            options={{ headerShown: false }} />
+                <Stack.Screen name="dictation/[id]"            options={{ headerShown: false }} />
 
                 {/* ── Dynamic routes ── */}
                 <Stack.Screen name="quiz/[id]"             options={{ headerShown: false }} />

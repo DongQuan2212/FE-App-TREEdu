@@ -44,8 +44,12 @@ export interface RegisterResponse {
 
 export interface RegisterFormErrors {
     fullName?: string;
-    email?:    string;
+    email?: string;
     password?: string;
+    rePassword?: string;
+    phoneNumber?: string;
+    birthYear?: string;
+    general?: string;
 }
 
 // ── Current User ─────────────────────────────────────────────────────────────
@@ -79,8 +83,6 @@ export interface UserProfile {
     lastStudyDate:         string | null;
 }
 
-
-// ── Generic API response wrapper ─────────────────────────────────────────────
 export interface ApiResponse<T = unknown> {
     message:    string;
     statusCode: number;

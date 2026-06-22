@@ -1,48 +1,35 @@
-export type WordForm =
-    | 'NOUN' | 'VERB' | 'ADJECTIVE' | 'ADVERB'
-    | 'PRONOUN' | 'PREPOSITION' | 'CONJUNCTION' | 'INTERJECTION';
-
 export interface FlashcardWord {
-    id: string;
-    newWord: string;
-    meaning: string;
-    example?: string;
-    wordForm: WordForm;
-    phoneme?: string;
-    imageURL?: string;
-    audioURL?: string;
+    id:        string;
+    flashcardId: string;
+    newWord:   string;
+    meaning:   string;
+    wordForm:  string;
+    phoneme:   string | null;
+    audioURL:  string | null;
+    createdAt: string;
+    updatedAt: string;
 }
 
 export interface FlashcardDetail {
-    id: string;
-    title: string;
-    description?: string;
-    level: number;
-    topic: string;
-    wordCount: number;
-    type: 'SYSTEM' | 'BY_MEMBER';
-    words: FlashcardWord[];
+    id:          string;
+    title:       string;
+    description: string;
+    level:       number;
+    topic:       string;
+    type:        string;
+    createdBy:   string | null;
+    visibility:  'PUBLIC' | 'PRIVATE';
+    isOwner:     boolean;
+    isViolated:  boolean | null;
+    wordCount:   number;
+    words:       FlashcardWord[];
+    createdAt:   string;
+    updatedAt:   string;
 }
 
 export interface WordFormState {
-    newWord: string;
-    meaning: string;
-    example: string;
-    wordForm: WordForm;
-    phoneme: string;
-    imageURL: string;
-    audioURL: string;
-}
-
-export interface CreateFlashcardForm {
-    title: string;
-    description: string;
-    level: number;
-    topic: string;
-}
-
-export interface CreateFlashcardErrors {
-    title?: string;
-    description?: string;
-    topic?: string;
+    newWord:  string;
+    meaning:  string;
+    wordForm: string;
+    phoneme:  string;
 }

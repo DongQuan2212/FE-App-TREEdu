@@ -64,12 +64,6 @@ export default function WordCard({ word, onEdit, onDelete }: Props) {
                     </Text>
                     <Text className="text-sm text-gray-800 mb-3">{word.meaning}</Text>
 
-                    {/* Example */}
-                    {word.example ? (
-                        <View className="bg-gray-50 border-l-4 border-gray-300 px-3 py-2 rounded-r-lg mb-3">
-                            <Text className="text-sm italic text-gray-600">"{word.example}"</Text>
-                        </View>
-                    ) : null}
 
                     {/* Actions */}
                     <View className="flex-row gap-2 pt-3 border-t border-gray-100">
@@ -92,20 +86,6 @@ export default function WordCard({ word, onEdit, onDelete }: Props) {
                     </View>
                 </View>
 
-                {/* Right: image */}
-                <View className="shrink-0">
-                    {word.imageURL ? (
-                        <Image
-                            source={{ uri: word.imageURL }}
-                            className="w-20 h-20 rounded-xl border border-gray-200"
-                            resizeMode="cover"
-                        />
-                    ) : (
-                        <View className="w-20 h-20 rounded-xl border-2 border-dashed border-gray-200 items-center justify-center bg-gray-50">
-                            <Ionicons name="image-outline" size={22} color="#D1D5DB" />
-                        </View>
-                    )}
-                </View>
             </View>
         </View>
     );

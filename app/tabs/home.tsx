@@ -1,19 +1,20 @@
-// app/tabs/home.tsx
-import React from 'react';
+import React, { useState } from 'react';
 import {
     StyleSheet, Text, View, TouchableOpacity,
     SafeAreaView, ScrollView, StatusBar,
     Dimensions, Platform, ActivityIndicator,
-    RefreshControl,
+    RefreshControl, Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Ionicons }  from '@expo/vector-icons';
-import { useAuth }       from '@/src/context/AuthContext';
-import { useMyProfile }  from '@/src/hooks/useMyProfile';
+import { Ionicons } from '@expo/vector-icons';
+import { useAuth }        from '@/src/context/AuthContext';
+import { useMyProfile }   from '@/src/hooks/useMyProfile';
+import { useMyTree }      from '@/src/hooks/useMyTree';
+import { useLeaderboard } from '@/src/hooks/useLeaderboard';
 
 const { width } = Dimensions.get('window');
 
-// ── Design tokens ─────────────────────────────────────────────────────────────
+// ── Design tokens ──────────────────────────────────────────────────────────
 const C = {
     bg:          '#F8FAF5',
     surface:     '#FFFFFF',
@@ -26,15 +27,18 @@ const C = {
     purpleLight: '#F3E8FF',
     amber:       '#D97706',
     amberLight:  '#FFF7ED',
+    orange:      '#EA580C',
+    orangeLight: '#FFF1EB',
     text:        '#111111',
     muted:       '#9CA3AF',
+    mutedLight:  '#F3F4F6',
 } as const;
 
 const SP = { xs: 8, sm: 12, md: 16, lg: 24, xl: 32 } as const;
 
 const shadow = {
     sm: Platform.select({
-        ios:     { shadowColor: '#000',     shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4,  elevation: 2 },
+        ios:     { shadowColor: '#000',    shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4,  elevation: 2 },
         android: { elevation: 2 },
         default: {},
     }),
@@ -48,9 +52,14 @@ const shadow = {
         android: { elevation: 8 },
         default: {},
     }),
+    orange: Platform.select({
+        ios:     { shadowColor: '#EA580C', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.20, shadowRadius: 12, elevation: 5 },
+        android: { elevation: 5 },
+        default: {},
+    }),
 } as const;
 
-// ── Static data ───────────────────────────────────────────────────────────────
+// ── Static data ────────────────────────────────────────────────────────────
 const FEATURES = [
     {
         id: 'quiz', icon: 'grid-outline' as const,
@@ -75,7 +84,24 @@ const WHY_CARDS = [
     { id: 'ai',       icon: 'mic-outline'     as const, iconBg: C.purpleLight, iconColor: C.purple,    keyword: 'AI Phát âm', sub: 'Nhận điểm tức thì' },
 ] as const;
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+const TESTIMONIALS = [
+    { id: '1', name: 'Nguyễn Lan Anh', text: 'Từ 5.5 lên 7.0 IELTS chỉ sau 2 tháng nhờ AI phát âm!', rating: 5, initials: 'LA', bg: '#DCFCE7', color: '#166534' },
+    { id: '2', name: 'Trần Minh Quân', text: 'Flashcard giúp mình nhớ 1000 từ trong 3 tuần. Quá ngon!', rating: 5, initials: 'MQ', bg: '#DBEAFE', color: '#1E40AF' },
+    { id: '3', name: 'Phạm Thu Hà',    text: 'Đề thi giống đề thật đến 95%. Đạt 9.0 môn Anh THPT QG!', rating: 5, initials: 'TH', bg: '#FCE7F3', color: '#9D174D' },
+] as const;
+
+const AVATAR_COLORS: [string, string][] = [
+    ['#DBEAFE', '#1E40AF'], ['#DCFCE7', '#166534'], ['#FCE7F3', '#9D174D'],
+    ['#EDE9FE', '#5B21B6'], ['#FFEDD5', '#9A3412'], ['#F0FDF4', '#14532D'],
+];
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+const hashColor = (userId = ''): [string, string] => {
+    let h = 0;
+    for (let i = 0; i < userId.length; i++) h = (h * 31 + userId.charCodeAt(i)) >>> 0;
+    return AVATAR_COLORS[h % AVATAR_COLORS.length];
+};
+
 const getGreeting = (): string => {
     const h = new Date().getHours();
     if (h < 12) return 'Chào buổi sáng ☀️';
@@ -114,7 +140,47 @@ const getLevelLabel = (level: number): string => {
     return 'Chuyên gia';
 };
 
-// ── Sub-components ────────────────────────────────────────────────────────────
+// ── Shared Avatar component ────────────────────────────────────────────────
+function UserAvatar({
+                        avatarUrl, initials, size, bg, textColor, borderColor,
+                    }: {
+    avatarUrl?: string | null;
+    initials: string;
+    size: number;
+    bg: string;
+    textColor: string;
+    borderColor?: string;
+}) {
+    const [imgError, setImgError] = useState(false);
+
+    const containerStyle = {
+        width: size, height: size, borderRadius: size / 2,
+        overflow: 'hidden' as const,
+        ...(borderColor ? { borderWidth: 2.5, borderColor } : {}),
+    };
+
+    if (avatarUrl && !imgError) {
+        return (
+            <View style={containerStyle}>
+                <Image
+                    source={{ uri: avatarUrl }}
+                    style={{ width: size, height: size }}
+                    onError={() => setImgError(true)}
+                />
+            </View>
+        );
+    }
+
+    return (
+        <View style={[containerStyle, { backgroundColor: bg, alignItems: 'center', justifyContent: 'center' }]}>
+            <Text style={{ fontSize: size * 0.32, fontWeight: '800', color: textColor }}>
+                {initials}
+            </Text>
+        </View>
+    );
+}
+
+// ── Sub-components ─────────────────────────────────────────────────────────
 function StatChip({ icon, color, bg, label, value }: {
     icon: React.ComponentProps<typeof Ionicons>['name'];
     color: string; bg: string; label: string; value: string;
@@ -128,45 +194,248 @@ function StatChip({ icon, color, bg, label, value }: {
     );
 }
 
-function ProgressBar({ progress }: { progress: number }) {
-    const clamped = Math.min(Math.max(progress, 0), 100);
+// ── Leaderboard Section ────────────────────────────────────────────────────
+type LBTab = 'TOTAL_XP' | 'STREAK';
+
+function LeaderboardSection() {
+    const [activeTab, setActiveTab] = useState<LBTab>('STREAK');
+
+    const { data: streakData, loading: streakLoading, myRank: streakMyRank } = useLeaderboard('STREAK');
+    const { data: xpData,     loading: xpLoading,     myRank: xpMyRank }     = useLeaderboard('TOTAL_XP');
+
+    const entries   = activeTab === 'STREAK' ? streakData   : xpData;
+    const isLoading = activeTab === 'STREAK' ? streakLoading : xpLoading;
+    const myRank    = activeTab === 'STREAK' ? streakMyRank  : xpMyRank;
+    const isStreak  = activeTab === 'STREAK';
+
+    const top3 = entries.filter((e) => e.rank <= 3);
+    const rest  = entries.filter((e) => e.rank  > 3);
+
+    const podiumOrder = [
+        top3.find((e) => e.rank === 2),
+        top3.find((e) => e.rank === 1),
+        top3.find((e) => e.rank === 3),
+    ].filter(Boolean) as typeof entries;
+
+    const unit     = isStreak ? 'ngày' : 'XP';
+    const valColor = isStreak ? C.amber : C.blue;
+    const iconName = isStreak ? ('flame' as const) : ('flash' as const);
+
     return (
-        <View style={s.progressTrack}>
-            <View style={[s.progressFill, { width: `${clamped}%` as any }]} />
+        <View style={s.lbContainer}>
+            {/* Header */}
+            <View style={s.lbHeader}>
+                <View>
+                    <Text style={s.lbTitle}>Bảng xếp hạng</Text>
+                    <Text style={s.lbSubtitle}>Cạnh tranh cùng học viên toàn hệ thống</Text>
+                </View>
+                <Ionicons name="trophy-outline" size={22} color={C.amber} />
+            </View>
+
+            {/* Tabs */}
+            <View style={s.lbTabBar}>
+                {([
+                    { key: 'STREAK'   as LBTab, label: 'Streak dài nhất', icon: 'flame' as const, activeColor: C.orange },
+                    { key: 'TOTAL_XP' as LBTab, label: 'Tổng điểm XP',   icon: 'flash' as const, activeColor: C.blue   },
+                ]).map(({ key, label, icon, activeColor }) => (
+                    <TouchableOpacity
+                        key={key}
+                        style={[s.lbTab, activeTab === key && s.lbTabActive]}
+                        onPress={() => setActiveTab(key)}
+                        activeOpacity={0.7}
+                    >
+                        <Ionicons name={icon} size={13} color={activeTab === key ? activeColor : C.muted} />
+                        <Text style={[s.lbTabText, activeTab === key && { color: C.text }]}>{label}</Text>
+                    </TouchableOpacity>
+                ))}
+            </View>
+
+            {/* My rank badge */}
+            {myRank && (
+                <View style={s.myRankBadge}>
+                    <Ionicons name="trophy" size={11} color="#10B981" />
+                    <Text style={s.myRankText}>Vị trí của bạn: </Text>
+                    <Text style={s.myRankNum}>#{myRank}</Text>
+                </View>
+            )}
+
+            {/* Content */}
+            {isLoading ? (
+                <View style={s.lbLoading}>
+                    <ActivityIndicator size="small" color={C.brand} />
+                </View>
+            ) : entries.length === 0 ? (
+                <View style={s.lbEmpty}>
+                    <Ionicons name="trophy-outline" size={32} color={C.muted} />
+                    <Text style={s.lbEmptyText}>Chưa có dữ liệu</Text>
+                </View>
+            ) : (
+                <>
+                    {/* Podium top 3 */}
+                    {podiumOrder.length > 0 && (
+                        <View style={s.podiumRow}>
+                            {podiumOrder.map((entry) => {
+                                const isTop1    = entry.rank === 1;
+                                const [avatarBg, avatarColor] = hashColor(entry.userId);
+                                const blockH    = isTop1 ? 80 : entry.rank === 2 ? 58 : 42;
+                                const avatarSize = isTop1 ? 60 : 48;
+                                const entryInitials = (entry.displayName ?? 'A')[0].toUpperCase();
+
+                                return (
+                                    <View key={entry.userId} style={[s.podiumItem, { width: isTop1 ? 120 : 100 }]}>
+                                        {/* Crown */}
+                                        {isTop1 && <Text style={s.podiumCrown}>👑</Text>}
+
+                                        {/* Avatar */}
+                                        <View style={s.podiumAvatarWrap}>
+                                            <UserAvatar
+                                                avatarUrl={entry.avatarUrl}
+                                                initials={entryInitials}
+                                                size={avatarSize}
+                                                bg={avatarBg}
+                                                textColor={avatarColor}
+                                                borderColor="#FFFFFF"
+                                            />
+                                        </View>
+
+                                        {/* Rank badge (not top1) */}
+                                        {!isTop1 && (
+                                            <View style={[s.podiumRankBadge, {
+                                                backgroundColor: entry.rank === 2 ? '#E5E7EB' : '#FFEDD5',
+                                            }]}>
+                                                <Text style={[s.podiumRankBadgeText, {
+                                                    color: entry.rank === 2 ? '#6B7280' : C.orange,
+                                                }]}>{entry.rank}</Text>
+                                            </View>
+                                        )}
+
+                                        {/* Name */}
+                                        <Text style={[s.podiumName, { fontSize: isTop1 ? 12 : 11 }]} numberOfLines={1}>
+                                            {entry.displayName ?? 'Ẩn danh'}
+                                        </Text>
+
+                                        {entry.isMe && (
+                                            <View style={s.podiumMeBadge}>
+                                                <Text style={s.podiumMeText}>Bạn</Text>
+                                            </View>
+                                        )}
+
+                                        {/* Value */}
+                                        <View style={s.podiumValue}>
+                                            <Ionicons name={iconName} size={11} color={valColor} />
+                                            <Text style={[s.podiumValueText, { color: valColor }]}>{entry.value}</Text>
+                                            <Text style={s.podiumUnit}>{unit}</Text>
+                                        </View>
+
+                                        {/* Block */}
+                                        <View style={[s.podiumBlock, {
+                                            height: blockH,
+                                            backgroundColor: isTop1 ? '#FEF9C3' : entry.rank === 2 ? '#F9FAFB' : '#FFF7ED',
+                                            borderColor:     isTop1 ? '#FDE68A' : entry.rank === 2 ? '#E5E7EB' : '#FFEDD5',
+                                        }]}>
+                                            {isTop1 && <Text style={s.podiumBlockNum}>1</Text>}
+                                        </View>
+                                    </View>
+                                );
+                            })}
+                        </View>
+                    )}
+
+                    {/* Rest list hạng 4+ */}
+                    {rest.length > 0 && (
+                        <View style={s.restList}>
+                            {rest.map((entry) => {
+                                const [avatarBg, avatarColor] = hashColor(entry.userId);
+                                const entryInitials = (entry.displayName ?? 'A')[0].toUpperCase();
+                                return (
+                                    <View key={entry.userId} style={[s.restRow, entry.isMe && s.restRowMe]}>
+                                        <Text style={s.restRank}>{entry.rank}</Text>
+                                        <UserAvatar
+                                            avatarUrl={entry.avatarUrl}
+                                            initials={entryInitials}
+                                            size={34}
+                                            bg={avatarBg}
+                                            textColor={avatarColor}
+                                        />
+                                        <View style={s.restInfo}>
+                                            <View style={s.restNameRow}>
+                                                <Text style={s.restName} numberOfLines={1}>
+                                                    {entry.displayName ?? 'Học viên'}
+                                                </Text>
+                                                {entry.isMe && (
+                                                    <View style={s.meBadge}>
+                                                        <Text style={s.meBadgeText}>Bạn</Text>
+                                                    </View>
+                                                )}
+                                            </View>
+                                            <Text style={s.restLevel}>Cấp {entry.level ?? 1}</Text>
+                                        </View>
+                                        <View style={s.restValueRow}>
+                                            <Ionicons name={iconName} size={12} color={C.muted} />
+                                            <Text style={s.restValue}>{entry.value}</Text>
+                                            <Text style={s.restUnit}>{unit}</Text>
+                                        </View>
+                                    </View>
+                                );
+                            })}
+                        </View>
+                    )}
+                </>
+            )}
         </View>
     );
 }
 
-// ── Main ──────────────────────────────────────────────────────────────────────
+// ── Testimonials ───────────────────────────────────────────────────────────
+function TestimonialsSection() {
+    return (
+        <View style={s.testimonialContainer}>
+            <Text style={s.testimonialTitle}>Học viên nói gì về TREEdu?</Text>
+            <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                decelerationRate="fast"
+                snapToInterval={width * 0.75 + SP.sm}
+                contentContainerStyle={s.testimonialScroll}
+            >
+                {TESTIMONIALS.map((item) => (
+                    <View key={item.id} style={[s.testimonialCard, shadow.sm as any]}>
+                        <View style={[s.testimonialAvatar, { backgroundColor: item.bg }]}>
+                            <Text style={[s.testimonialAvatarText, { color: item.color }]}>{item.initials}</Text>
+                        </View>
+                        <Text style={s.testimonialStars}>{'★'.repeat(item.rating)}</Text>
+                        <Text style={s.testimonialQuote}>{item.text}</Text>
+                        <Text style={s.testimonialName}>— {item.name}</Text>
+                    </View>
+                ))}
+            </ScrollView>
+        </View>
+    );
+}
+
+// ── Main ───────────────────────────────────────────────────────────────────
 export default function HomeScreen() {
     const router = useRouter();
-
-    // useAuth → identity từ /auth/current-user (role, email)
-    const { user } = useAuth();
-
-    // useMyProfile → gamification từ /users/me (XP, streak, level...)
+    const { user }   = useAuth();
     const { profile, loading: profileLoading, refreshing, refresh } = useMyProfile();
+    const { refreshTree } = useMyTree();
 
-    const greeting = getGreeting();
-
-    // Tên hiển thị: ưu tiên profile.fullName (từ /me), fallback user.email
+    const greeting        = getGreeting();
     const displayFullName = profile?.fullName ?? null;
     const displayEmail    = user?.email       ?? null;
     const initials        = getInitials(displayFullName, displayEmail);
     const shortName       = getDisplayName(displayFullName, displayEmail);
 
-    // Gamification — từ /users/me
-    const streakDays  = profile?.streakCount           ?? 0;
-    const xp          = profile?.xp                    ?? 0;
-    const level       = profile?.level                 ?? 1;
-    const quizDone    = profile?.totalQuizCompleted    ?? 0;
-    const flashDone   = profile?.totalFlashcardLearned ?? 0;
-    const levelLabel  = getLevelLabel(level);
+    const streakDays = profile?.streakCount           ?? 0;
+    const xp         = profile?.xp                    ?? 0;
+    const level      = profile?.level                 ?? 1;
+    const quizDone   = profile?.totalQuizCompleted    ?? 0;
+    const flashDone  = profile?.totalFlashcardLearned ?? 0;
+    const levelLabel = getLevelLabel(level);
 
-    const todayProgress = Math.min(
-        ((quizDone % 5) * 20) + Math.min((flashDone % 10) * 5, 50),
-        100,
-    );
+    const onRefreshAll = async () => {
+        await Promise.all([refresh(), refreshTree()]);
+    };
 
     return (
         <SafeAreaView style={s.safe}>
@@ -186,9 +455,15 @@ export default function HomeScreen() {
                         </View>
                     </View>
                     <View style={s.bannerRight}>
-                        <View style={[s.avatar, shadow.sm as any]}>
-                            <Text style={s.avatarText}>{initials}</Text>
-                        </View>
+                        {/* Avatar — dùng avatarUrl từ profile nếu có */}
+                        <UserAvatar
+                            avatarUrl={profile?.avatarUrl}
+                            initials={initials}
+                            size={52}
+                            bg="#C0DD97"
+                            textColor={C.brandDark}
+                            borderColor="rgba(255,255,255,0.6)"
+                        />
                         <View style={s.streakPill}>
                             <Text style={s.streakFire}>🔥</Text>
                             <Text style={s.streakCount}>{streakDays} ngày</Text>
@@ -204,7 +479,7 @@ export default function HomeScreen() {
                 refreshControl={
                     <RefreshControl
                         refreshing={refreshing}
-                        onRefresh={refresh}
+                        onRefresh={onRefreshAll}
                         colors={[C.brand]}
                         tintColor={C.brand}
                     />
@@ -222,26 +497,6 @@ export default function HomeScreen() {
                         <StatChip icon="layers-outline"           color={C.blue}  bg={C.blueLight}  label="Flashcard" value={String(flashDone)} />
                     </View>
                 )}
-
-                {/* ── Progress card ── */}
-                <View style={[s.progressCard, shadow.sm as any]}>
-                    <View style={s.progressTop}>
-                        <View style={s.progressIcon}>
-                            <Ionicons name="trophy-outline" size={18} color={C.amber} />
-                        </View>
-                        <Text style={s.progressTitle}>Mục tiêu hôm nay</Text>
-                        <Text style={s.progressPct}>{todayProgress}%</Text>
-                    </View>
-                    <ProgressBar progress={todayProgress} />
-                    <Text style={s.progressSub}>
-                        {todayProgress === 0
-                            ? 'Hãy bắt đầu học để đạt mục tiêu hôm nay! 🚀'
-                            : todayProgress >= 100
-                                ? '🎉 Xuất sắc! Bạn đã hoàn thành mục tiêu hôm nay!'
-                                : `Đã hoàn thành ${todayProgress}% mục tiêu — tiếp tục nào! 💪`
-                        }
-                    </Text>
-                </View>
 
                 {/* ── Feature cards ── */}
                 <Text style={s.sectionLabel}>TÍNH NĂNG</Text>
@@ -269,6 +524,37 @@ export default function HomeScreen() {
                         </TouchableOpacity>
                     ))}
                 </View>
+
+                {/* ── Dictation card ── */}
+                <TouchableOpacity
+                    style={[s.dictationCard, shadow.orange as any]}
+                    activeOpacity={0.7}
+                    onPress={() => router.push('/tabs/dictation' as any)}
+                >
+                    <View style={s.dictationBlob1} />
+                    <View style={s.dictationBlob2} />
+                    <View style={s.dictationRow}>
+                        <View style={s.dictationLeft}>
+                            <View style={s.dictationBadge}>
+                                <Text style={s.dictationBadgeText}>🎧 Nghe Chính Tả</Text>
+                            </View>
+                            <Text style={s.dictationTitle}>Tăng phản xạ{'\n'}Nghe · Viết</Text>
+                            <Text style={s.dictationDesc}>AI bóc băng tiếng Việt từng câu, so khớp và sửa lỗi chi tiết</Text>
+                            <View style={s.dictationBtn}>
+                                <Text style={s.dictationBtnText}>Luyện nghe</Text>
+                                <Ionicons name="arrow-forward" size={13} color={C.orange} />
+                            </View>
+                        </View>
+                        <View style={s.dictationIconWrap}>
+                            <View style={s.dictationRing3} />
+                            <View style={s.dictationRing2} />
+                            <View style={s.dictationRing1} />
+                            <View style={s.dictationCore}>
+                                <Ionicons name="headset" size={26} color={C.orange} />
+                            </View>
+                        </View>
+                    </View>
+                </TouchableOpacity>
 
                 {/* ── Pronunciation hero card ── */}
                 <TouchableOpacity
@@ -301,6 +587,9 @@ export default function HomeScreen() {
                     </View>
                 </TouchableOpacity>
 
+                {/* ── Leaderboard ── */}
+                <LeaderboardSection />
+
                 {/* ── Why TREEdu ── */}
                 <Text style={[s.sectionLabel, { marginTop: SP.xs }]}>TẠI SAO CHỌN TREEDU?</Text>
                 <ScrollView
@@ -321,18 +610,21 @@ export default function HomeScreen() {
                     ))}
                 </ScrollView>
 
+                {/* ── Testimonials ── */}
+                <TestimonialsSection />
+
                 <View style={{ height: SP.xl }} />
             </ScrollView>
         </SafeAreaView>
     );
 }
 
-// ── Styles ────────────────────────────────────────────────────────────────────
+// ── Styles ─────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
     safe: { flex: 1, backgroundColor: C.bg },
 
     heroBanner:     { backgroundColor: C.brandDark, overflow: 'hidden', paddingHorizontal: SP.md, paddingTop: SP.md, paddingBottom: SP.lg + 4 },
-    bannerCircle1:  { position: 'absolute', width: 160, height: 160, borderRadius: 80,  backgroundColor: '#4A8020', opacity: 0.45, right: -40,  top: -50 },
+    bannerCircle1:  { position: 'absolute', width: 160, height: 160, borderRadius: 80,  backgroundColor: '#4A8020', opacity: 0.45, right: -40, top: -50 },
     bannerCircle2:  { position: 'absolute', width: 100, height: 100, borderRadius: 50,  backgroundColor: '#6AAD30', opacity: 0.25, left: -20, bottom: -30 },
     bannerRow:      { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
     bannerLeft:     { flex: 1, paddingRight: SP.sm },
@@ -341,8 +633,6 @@ const s = StyleSheet.create({
     levelBadge:     { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
     levelText:      { fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.9)' },
     bannerRight:    { alignItems: 'center', gap: SP.xs },
-    avatar:         { width: 52, height: 52, borderRadius: 26, backgroundColor: '#C0DD97', borderWidth: 2.5, borderColor: 'rgba(255,255,255,0.6)', alignItems: 'center', justifyContent: 'center' },
-    avatarText:     { fontSize: 17, fontWeight: '800', color: C.brandDark },
     streakPill:     { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 20, paddingHorizontal: SP.xs, paddingVertical: 4, gap: 3 },
     streakFire:     { fontSize: 12 },
     streakCount:    { fontSize: 11, fontWeight: '800', color: '#FFFFFF' },
@@ -356,15 +646,6 @@ const s = StyleSheet.create({
     statValue: { fontSize: 16, fontWeight: '800' },
     statLabel: { fontSize: 10, fontWeight: '600', color: C.muted, letterSpacing: 0.3 },
 
-    progressCard:  { backgroundColor: C.surface, borderRadius: 20, padding: SP.md, marginBottom: SP.lg },
-    progressTop:   { flexDirection: 'row', alignItems: 'center', marginBottom: SP.sm, gap: 8 },
-    progressIcon:  { width: 32, height: 32, borderRadius: 10, backgroundColor: C.amberLight, alignItems: 'center', justifyContent: 'center' },
-    progressTitle: { flex: 1, fontSize: 14, fontWeight: '700', color: C.text },
-    progressPct:   { fontSize: 16, fontWeight: '800', color: C.brand },
-    progressTrack: { height: 8, backgroundColor: C.bg, borderRadius: 8, overflow: 'hidden', marginBottom: SP.xs },
-    progressFill:  { height: 8, backgroundColor: C.brand, borderRadius: 8 },
-    progressSub:   { fontSize: 12, color: C.muted, marginTop: 4, lineHeight: 17 },
-
     sectionLabel: { fontSize: 11, fontWeight: '600', color: C.muted, letterSpacing: 0.8, marginBottom: SP.sm },
 
     gridRow:     { flexDirection: 'row', gap: SP.sm, marginBottom: SP.sm },
@@ -374,6 +655,23 @@ const s = StyleSheet.create({
     cardDesc:    { fontSize: 11, color: C.muted, lineHeight: 16, marginBottom: SP.md, flex: 1 },
     cardBtn:     { height: 40, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, overflow: 'hidden' },
     cardBtnText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700' },
+
+    dictationCard:      { backgroundColor: '#FFF7ED', borderRadius: 24, padding: SP.md, marginBottom: SP.sm, overflow: 'hidden', minHeight: 130, borderWidth: 1.5, borderColor: '#FFEDD5' },
+    dictationBlob1:     { position: 'absolute', width: 110, height: 110, borderRadius: 55, backgroundColor: '#FED7AA', right: -20, top: -20, opacity: 0.6 },
+    dictationBlob2:     { position: 'absolute', width: 70,  height: 70,  borderRadius: 35, backgroundColor: '#FDBA74', right: 35,  bottom: -20, opacity: 0.4 },
+    dictationRow:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    dictationLeft:      { flex: 1 },
+    dictationBadge:     { alignSelf: 'flex-start', backgroundColor: '#FFEDD5', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4, marginBottom: 8 },
+    dictationBadgeText: { fontSize: 11, fontWeight: '700', color: C.orange, letterSpacing: 0.3 },
+    dictationTitle:     { fontSize: 18, fontWeight: '800', color: C.orange, marginBottom: 4, lineHeight: 24 },
+    dictationDesc:      { fontSize: 11, color: '#9A3412', opacity: 0.7, lineHeight: 16, marginBottom: SP.sm },
+    dictationBtn:       { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', backgroundColor: '#FFEDD5', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8 },
+    dictationBtnText:   { fontSize: 13, fontWeight: '700', color: C.orange },
+    dictationIconWrap:  { width: 80, height: 80, alignItems: 'center', justifyContent: 'center' },
+    dictationRing3:     { position: 'absolute', width: 78, height: 78, borderRadius: 39, backgroundColor: '#FED7AA', opacity: 0.3 },
+    dictationRing2:     { position: 'absolute', width: 58, height: 58, borderRadius: 29, backgroundColor: '#FDBA74', opacity: 0.35 },
+    dictationRing1:     { position: 'absolute', width: 44, height: 44, borderRadius: 22, backgroundColor: '#FB923C', opacity: 0.25 },
+    dictationCore:      { width: 40, height: 40, borderRadius: 20, backgroundColor: '#FFEDD5', alignItems: 'center', justifyContent: 'center' },
 
     heroCard:        { backgroundColor: '#FAF5FF', borderRadius: 24, padding: SP.md, marginBottom: SP.lg, overflow: 'hidden', minHeight: 140 },
     heroBlobA:       { position: 'absolute', width: 120, height: 120, borderRadius: 60, backgroundColor: '#EDE9FE', right: -20, top: -20, opacity: 0.7 },
@@ -392,9 +690,63 @@ const s = StyleSheet.create({
     micRing1: { position: 'absolute', width: 50, height: 50, borderRadius: 25, backgroundColor: '#A78BFA', opacity: 0.25 },
     micCore:  { width: 44, height: 44, borderRadius: 22, backgroundColor: '#EDE9FE', alignItems: 'center', justifyContent: 'center' },
 
+    lbContainer:  { backgroundColor: C.surface, borderRadius: 24, padding: SP.md, marginBottom: SP.lg },
+    lbHeader:     { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: SP.sm },
+    lbTitle:      { fontSize: 17, fontWeight: '800', color: C.text },
+    lbSubtitle:   { fontSize: 11, color: C.muted, marginTop: 2 },
+    lbTabBar:     { flexDirection: 'row', backgroundColor: C.mutedLight, borderRadius: 14, padding: 3, marginBottom: SP.sm },
+    lbTab:        { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, paddingVertical: 8, borderRadius: 11 },
+    lbTabActive:  { backgroundColor: C.surface },
+    lbTabText:    { fontSize: 12, fontWeight: '600', color: C.muted },
+    myRankBadge:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, backgroundColor: C.mutedLight, borderRadius: 20, paddingVertical: 6, paddingHorizontal: 12, alignSelf: 'center', marginBottom: SP.sm },
+    myRankText:   { fontSize: 12, color: C.muted },
+    myRankNum:    { fontSize: 12, fontWeight: '800', color: C.text },
+    lbLoading:    { height: 120, alignItems: 'center', justifyContent: 'center' },
+    lbEmpty:      { height: 120, alignItems: 'center', justifyContent: 'center', gap: 8 },
+    lbEmptyText:  { fontSize: 13, color: C.muted },
+
+    podiumRow:           { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center', gap: SP.xs, marginBottom: SP.md, paddingTop: SP.lg },
+    podiumItem:          { alignItems: 'center' },
+    podiumCrown:         { fontSize: 20, marginBottom: 4 },
+    podiumAvatarWrap:    { marginBottom: 4 },
+    podiumRankBadge:     { position: 'absolute', top: -4, right: -4, width: 18, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#FFFFFF' },
+    podiumRankBadgeText: { fontSize: 9, fontWeight: '700' },
+    podiumName:          { fontSize: 11, fontWeight: '600', color: C.text, textAlign: 'center', marginBottom: 2, maxWidth: 110 },
+    podiumMeBadge:       { backgroundColor: '#D1FAE5', borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2, marginBottom: 4 },
+    podiumMeText:        { fontSize: 9, fontWeight: '700', color: '#065F46' },
+    podiumValue:         { flexDirection: 'row', alignItems: 'center', gap: 2, marginBottom: 6 },
+    podiumValueText:     { fontSize: 12, fontWeight: '800' },
+    podiumUnit:          { fontSize: 10, color: C.muted },
+    podiumBlock:         { width: '100%', borderRadius: 12, borderWidth: 1, alignItems: 'center', paddingTop: 8 },
+    podiumBlockNum:      { fontSize: 18, fontWeight: '800', color: '#D97706' },
+
+    restList:       { gap: 6 },
+    restRow:        { flexDirection: 'row', alignItems: 'center', gap: SP.sm, paddingVertical: 10, paddingHorizontal: SP.sm, borderRadius: 16, backgroundColor: C.bg, borderWidth: 1, borderColor: 'transparent' },
+    restRowMe:      { borderColor: '#6EE7B7' },
+    restRank:       { width: 20, textAlign: 'center', fontSize: 12, fontWeight: '600', color: C.muted },
+    restInfo:       { flex: 1, minWidth: 0 },
+    restNameRow:    { flexDirection: 'row', alignItems: 'center', gap: 5 },
+    restName:       { fontSize: 13, fontWeight: '600', color: C.text, flexShrink: 1 },
+    restLevel:      { fontSize: 11, color: C.muted, marginTop: 1 },
+    restValueRow:   { flexDirection: 'row', alignItems: 'center', gap: 3 },
+    restValue:      { fontSize: 13, fontWeight: '700', color: '#4B5563' },
+    restUnit:       { fontSize: 11, color: C.muted },
+    meBadge:        { backgroundColor: '#D1FAE5', borderRadius: 8, paddingHorizontal: 5, paddingVertical: 1 },
+    meBadgeText:    { fontSize: 9, fontWeight: '700', color: '#065F46' },
+
     whyScroll:  { paddingRight: SP.md, paddingBottom: 4, gap: SP.sm },
     whyCard:    { width: width * 0.42, backgroundColor: C.surface, borderRadius: 20, padding: SP.md, alignItems: 'flex-start' },
     whyIconBox: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginBottom: SP.sm },
     whyKeyword: { fontSize: 14, fontWeight: '800', marginBottom: 3 },
     whySub:     { fontSize: 11, color: C.muted, lineHeight: 16 },
+
+    testimonialContainer:  { marginBottom: SP.lg },
+    testimonialTitle:      { fontSize: 16, fontWeight: '800', color: C.text, marginBottom: SP.sm },
+    testimonialScroll:     { paddingRight: SP.md, gap: SP.sm },
+    testimonialCard:       { width: width * 0.72, backgroundColor: C.surface, borderRadius: 20, padding: SP.md },
+    testimonialAvatar:     { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', marginBottom: SP.xs },
+    testimonialAvatarText: { fontSize: 16, fontWeight: '800' },
+    testimonialStars:      { fontSize: 16, color: '#FBBF24', marginBottom: SP.xs },
+    testimonialQuote:      { fontSize: 13, color: '#374151', fontStyle: 'italic', lineHeight: 19, marginBottom: SP.xs },
+    testimonialName:       { fontSize: 12, fontWeight: '700', color: C.muted },
 });

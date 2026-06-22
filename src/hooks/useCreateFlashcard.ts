@@ -1,21 +1,12 @@
 import { useState } from 'react';
-import { Alert } from 'react-native';
+import { Alert }    from 'react-native';
 import { useRouter } from 'expo-router';
-import { API_ENDPOINTS } from '../constants/api';
-import { getToken } from '../utils/storage';
+import { createFlashcardApi } from '../constants/flashcardApi';
 
-interface CreateFlashcardPayload {
-    title: string;
-    description: string;
-    level: number;
-    topic: string;
-}
-
-interface FormErrors {
-    title?: string;
+interface CreateErrors {
+    title?:       string;
     description?: string;
-    topic?: string;
-    level?: string;
+    topic?:       string;
 }
 
 export function useCreateFlashcard() {
@@ -25,70 +16,40 @@ export function useCreateFlashcard() {
     const [description, setDescription] = useState('');
     const [topic,       setTopic]       = useState('');
     const [level,       setLevel]       = useState(1);
+    const [visibility,  setVisibility]  = useState<'PUBLIC' | 'PRIVATE'>('PRIVATE');
     const [loading,     setLoading]     = useState(false);
-    const [errors,      setErrors]      = useState<FormErrors>({});
+    const [errors,      setErrors]      = useState<CreateErrors>({});
 
-    const clearError = (field: keyof FormErrors) =>
-        setErrors((prev) => ({ ...prev, [field]: undefined }));
-
-    // ── Validate ─────────────────────────────────────────
-    const validate = (): boolean => {
-        const newErrors: FormErrors = {};
-
-        if (!title.trim())
-            newErrors.title = 'Vui lòng nhập tên bộ thẻ';
-        else if (title.trim().length < 3)
-            newErrors.title = 'Tên bộ thẻ phải có ít nhất 3 ký tự';
-
-        if (!description.trim())
-            newErrors.description = 'Vui lòng nhập mô tả';
-
-        if (!topic.trim())
-            newErrors.topic = 'Vui lòng nhập chủ đề';
-
-        if (level < 1 || level > 6)
-            newErrors.level = 'Cấp độ phải từ 1 đến 6';
-
-        setErrors(newErrors);
-        return Object.keys(newErrors).length === 0;
+    const clearError = (field: keyof CreateErrors) => {
+        setErrors(prev => ({ ...prev, [field]: undefined }));
     };
 
-    // ── Gọi API tạo flashcard ────────────────────────────
+    const validate = (): boolean => {
+        const e: CreateErrors = {};
+        if (!title.trim())       e.title = 'Vui lòng nhập tên bộ thẻ';
+        if (!topic.trim())       e.topic = 'Vui lòng nhập chủ đề';
+        if (title.trim().length < 3) e.title = 'Tên bộ thẻ phải ít nhất 3 ký tự';
+        setErrors(e);
+        return Object.keys(e).length === 0;
+    };
+
     const handleCreate = async () => {
         if (!validate()) return;
-
         setLoading(true);
         try {
-            const token = await getToken();
-
-            const res = await fetch(API_ENDPOINTS.flashcardList, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-                },
-                body: JSON.stringify({
-                    title:       title.trim(),
-                    description: description.trim(),
-                    level,
-                    topic:       topic.trim(),
-                } as CreateFlashcardPayload),
+            const result = await createFlashcardApi({
+                title:       title.trim(),
+                description: description.trim(),
+                topic:       topic.trim(),
+                level,
+                visibility,
             });
-
-            const data = await res.json();
-
-            if (res.ok && data.success) {
-                Alert.alert('Thành công', 'Tạo bộ thẻ mới thành công!', [
-                    {
-                        text: 'OK',
-                        onPress: () => router.back(), // quay về danh sách
-                    },
-                ]);
-            } else {
-                Alert.alert('Lỗi', data?.message ?? 'Tạo flashcard thất bại.');
-            }
-        } catch {
-            Alert.alert('Không thể kết nối', 'Vui lòng kiểm tra kết nối mạng.');
+            Alert.alert('Thành công', 'Bộ thẻ đã được tạo!', [
+                { text: 'OK', onPress: () => router.replace(`/flashcard/${result.id}` as any) },
+            ]);
+        } catch (err: any) {
+            const msg = err?.response?.data?.message ?? 'Không thể tạo bộ thẻ.';
+            Alert.alert('Lỗi', msg);
         } finally {
             setLoading(false);
         }
@@ -99,6 +60,7 @@ export function useCreateFlashcard() {
         description, setDescription,
         topic,       setTopic,
         level,       setLevel,
+        visibility,  setVisibility,
         loading,
         errors,
         clearError,

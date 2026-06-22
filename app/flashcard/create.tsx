@@ -1,14 +1,14 @@
 import React from 'react';
-import { AuthProvider } from '../../src/context/AuthContext';
 import {
     View, Text, TextInput, TouchableOpacity,
     ScrollView, StatusBar, ActivityIndicator,
     KeyboardAvoidingView, Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { useCreateFlashcard } from '../../src/hooks/useCreateFlashcard'
+import { SafeAreaView }  from 'react-native-safe-area-context';
+import { useRouter }     from 'expo-router';
+import { Ionicons }      from '@expo/vector-icons';
+import { useCreateFlashcard } from '../../src/hooks/useCreateFlashcard';
+
 const LEVEL_OPTIONS = [1, 2, 3, 4, 5];
 
 export default function CreateFlashcardScreen() {
@@ -18,23 +18,21 @@ export default function CreateFlashcardScreen() {
         description, setDescription,
         topic,       setTopic,
         level,       setLevel,
+        visibility,  setVisibility,
         loading,
         errors,
         clearError,
         handleCreate,
     } = useCreateFlashcard();
 
-    // ── Input helper ─────────────────────────────────────
     const fieldClass = (err?: string) =>
         `h-[50px] border rounded-xl px-4 text-sm text-gray-900 bg-white ${
             err ? 'border-red-400' : 'border-gray-200'
         }`;
 
     return (
-        <AuthProvider>
         <SafeAreaView className="flex-1 bg-white">
             <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-
             <KeyboardAvoidingView
                 className="flex-1"
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -44,7 +42,7 @@ export default function CreateFlashcardScreen() {
                     showsVerticalScrollIndicator={false}
                     keyboardShouldPersistTaps="handled"
                 >
-                    {/* ── Back ── */}
+                    {/* Back */}
                     <TouchableOpacity
                         onPress={() => router.back()}
                         className="flex-row items-center gap-1.5 self-start mb-8"
@@ -54,7 +52,7 @@ export default function CreateFlashcardScreen() {
                         <Text className="text-sm font-medium text-gray-500">Quay lại</Text>
                     </TouchableOpacity>
 
-                    {/* ── Header ── */}
+                    {/* Header */}
                     <View className="mb-8">
                         <Text className="text-[28px] font-extrabold text-gray-900 tracking-tight mb-2">
                             Tạo bộ thẻ mới
@@ -64,12 +62,13 @@ export default function CreateFlashcardScreen() {
                         </Text>
                     </View>
 
-                    {/* ── Form ── */}
                     <View style={{ gap: 24 }}>
 
                         {/* Title */}
                         <View>
-                            <Text className="text-sm font-semibold text-gray-700 mb-2">Tên bộ thẻ</Text>
+                            <Text className="text-sm font-semibold text-gray-700 mb-2">
+                                Tên bộ thẻ <Text className="text-red-400">*</Text>
+                            </Text>
                             <TextInput
                                 className={fieldClass(errors.title)}
                                 placeholder="Ví dụ: 3000 từ vựng Oxford..."
@@ -97,16 +96,14 @@ export default function CreateFlashcardScreen() {
                                 numberOfLines={3}
                                 style={{ textAlignVertical: 'top', minHeight: 80 }}
                             />
-                            {errors.description ? (
-                                <Text className="text-xs text-red-500 mt-1">{errors.description}</Text>
-                            ) : null}
                         </View>
 
-                        {/* Topic + Level row */}
+                        {/* Topic + Level */}
                         <View className="flex-row gap-4">
-                            {/* Topic */}
                             <View className="flex-1">
-                                <Text className="text-sm font-semibold text-gray-700 mb-2">Chủ đề</Text>
+                                <Text className="text-sm font-semibold text-gray-700 mb-2">
+                                    Chủ đề <Text className="text-red-400">*</Text>
+                                </Text>
                                 <View className={`flex-row items-center h-[50px] border rounded-xl bg-white ${
                                     errors.topic ? 'border-red-400' : 'border-gray-200'
                                 }`}>
@@ -126,7 +123,6 @@ export default function CreateFlashcardScreen() {
                                 ) : null}
                             </View>
 
-                            {/* Level picker */}
                             <View style={{ width: 130 }}>
                                 <Text className="text-sm font-semibold text-gray-700 mb-2">Độ khó</Text>
                                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -136,16 +132,12 @@ export default function CreateFlashcardScreen() {
                                                 key={l}
                                                 onPress={() => setLevel(l)}
                                                 className={`w-[42px] h-[50px] rounded-xl border items-center justify-center ${
-                                                    level === l
-                                                        ? 'bg-gray-900 border-gray-900'
-                                                        : 'bg-white border-gray-200'
+                                                    level === l ? 'bg-gray-900 border-gray-900' : 'bg-white border-gray-200'
                                                 }`}
                                             >
                                                 <Text className={`text-sm font-bold ${
                                                     level === l ? 'text-white' : 'text-gray-500'
-                                                }`}>
-                                                    {l}
-                                                </Text>
+                                                }`}>{l}</Text>
                                             </TouchableOpacity>
                                         ))}
                                     </View>
@@ -153,12 +145,73 @@ export default function CreateFlashcardScreen() {
                             </View>
                         </View>
 
+                        {/* Visibility toggle */}
+                        <View>
+                            <Text className="text-sm font-semibold text-gray-700 mb-3">Chế độ hiển thị</Text>
+                            <View className="flex-row gap-3">
+                                <TouchableOpacity
+                                    onPress={() => setVisibility('PRIVATE')}
+                                    className={`flex-1 flex-row items-center gap-2 px-4 h-[50px] rounded-xl border-2 ${
+                                        visibility === 'PRIVATE'
+                                            ? 'border-gray-900 bg-gray-50'
+                                            : 'border-gray-200 bg-white'
+                                    }`}
+                                    activeOpacity={0.8}
+                                >
+                                    <Ionicons
+                                        name="lock-closed-outline"
+                                        size={18}
+                                        color={visibility === 'PRIVATE' ? '#111827' : '#9CA3AF'}
+                                    />
+                                    <View>
+                                        <Text className={`text-sm font-bold ${
+                                            visibility === 'PRIVATE' ? 'text-gray-900' : 'text-gray-400'
+                                        }`}>Riêng tư</Text>
+                                        <Text className="text-[10px] text-gray-400">Chỉ mình tôi</Text>
+                                    </View>
+                                    {visibility === 'PRIVATE' && (
+                                        <View className="ml-auto">
+                                            <Ionicons name="checkmark-circle" size={18} color="#111827" />
+                                        </View>
+                                    )}
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    onPress={() => setVisibility('PUBLIC')}
+                                    className={`flex-1 flex-row items-center gap-2 px-4 h-[50px] rounded-xl border-2 ${
+                                        visibility === 'PUBLIC'
+                                            ? 'border-blue-500 bg-blue-50'
+                                            : 'border-gray-200 bg-white'
+                                    }`}
+                                    activeOpacity={0.8}
+                                >
+                                    <Ionicons
+                                        name="globe-outline"
+                                        size={18}
+                                        color={visibility === 'PUBLIC' ? '#3B82F6' : '#9CA3AF'}
+                                    />
+                                    <View>
+                                        <Text className={`text-sm font-bold ${
+                                            visibility === 'PUBLIC' ? 'text-blue-600' : 'text-gray-400'
+                                        }`}>Công khai</Text>
+                                        <Text className="text-[10px] text-gray-400">Mọi người thấy</Text>
+                                    </View>
+                                    {visibility === 'PUBLIC' && (
+                                        <View className="ml-auto">
+                                            <Ionicons name="checkmark-circle" size={18} color="#3B82F6" />
+                                        </View>
+                                    )}
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+
                         {/* Info box */}
                         <View className="flex-row gap-3 p-4 bg-gray-50 border border-gray-100 rounded-xl">
                             <Ionicons name="information-circle-outline" size={20} color="#9CA3AF" style={{ flexShrink: 0, marginTop: 1 }} />
                             <View style={{ gap: 4 }}>
-                                <Text className="text-sm text-gray-500">• Hãy chọn tiêu đề ngắn gọn.</Text>
-                                <Text className="text-sm text-gray-500">• Phân loại Level chính xác giúp hệ thống gợi ý tốt hơn.</Text>
+                                <Text className="text-sm text-gray-500">• Tên bộ thẻ tối thiểu 3 ký tự.</Text>
+                                <Text className="text-sm text-gray-500">• Sau khi có người học, bộ thẻ không thể chỉnh sửa.</Text>
+                                <Text className="text-sm text-gray-500">• Công khai giúp người khác học bộ thẻ của bạn.</Text>
                             </View>
                         </View>
 
@@ -171,7 +224,6 @@ export default function CreateFlashcardScreen() {
                             >
                                 <Text className="text-sm font-semibold text-gray-500">Hủy bỏ</Text>
                             </TouchableOpacity>
-
                             <TouchableOpacity
                                 onPress={handleCreate}
                                 disabled={loading}
@@ -195,6 +247,5 @@ export default function CreateFlashcardScreen() {
                 </ScrollView>
             </KeyboardAvoidingView>
         </SafeAreaView>
-        </AuthProvider>
     );
 }

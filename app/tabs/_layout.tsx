@@ -35,6 +35,12 @@ const TAB_CONFIG: {
         iconActive: "mic",
     },
     {
+        name: "dictation",
+        label: "Nghe chép",
+        icon: "headset-outline",
+        iconActive: "headset",
+    },
+    {
         name: "profile",
         label: "Cá nhân",
         icon: "person-outline",
@@ -63,9 +69,10 @@ export default function TabsLayout() {
                     shadowRadius: 8,
                 },
                 tabBarLabelStyle: {
+                    // Mẹo nhỏ: Vì giờ có 6 tab, bạn có thể giảm font-size xuống 9 hoặc giữ nguyên 10 tùy màn hình thực tế nhé
                     fontSize: 10,
                     fontWeight: "600",
-                    marginTop: 2,
+                    marginTop: 1,
                 },
             }}
         >
