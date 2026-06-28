@@ -16,7 +16,9 @@ export function useRegister() {
     // ── State mới ───────────────────────────────────────────
     const [rePassword, setRePassword] = useState('');
     const [phoneNumber, setPhoneNumber] = useState('');
-    const [avatarUrl, setAvatarUrl] = useState('');
+
+    // Đã xóa avatarUrl vì quản lý file ảnh trực tiếp bên RegisterScreen
+
     const [birthYear, setBirthYear] = useState('');
     const [address, setAddress] = useState('');
     const [gender, setGender] = useState<'MALE' | 'FEMALE' | 'OTHER'>('MALE');
@@ -69,38 +71,56 @@ export function useRegister() {
     };
 
     // ── Gọi API đăng ký ─────────────────────────────────────
-    const handleRegister = async () => {
+    // Nhận avatarFile từ file Screen truyền vào
+    const handleRegister = async (avatarFile?: any) => {
         if (!validate()) return;
 
         setLoading(true);
         try {
+            // Sử dụng FormData để gửi file ảnh thay vì JSON
+            const formData = new FormData();
+
+            formData.append('fullName', fullName.trim());
+            formData.append('email', email.trim().toLowerCase());
+            formData.append('password', password);
+            formData.append('rePassword', rePassword);
+            formData.append('gender', gender);
+
+            if (phoneNumber.trim()) formData.append('phone', phoneNumber.trim());
+            if (birthYear) formData.append('birthYear', birthYear);
+            if (address.trim()) formData.append('address', address.trim());
+
+            // Xử lý đính kèm file ảnh cho React Native
+            if (avatarFile) {
+                formData.append('avatarFile', {
+                    uri: avatarFile.uri,
+                    name: avatarFile.fileName || 'avatar.jpg',
+                    type: avatarFile.mimeType || 'image/jpeg',
+                } as any);
+            }
+
+            // Gửi request bằng fetch (Lưu ý: Bỏ qua Content-Type để hệ thống tự động sinh ra header multipart kèm boundary)
             const response = await fetch(API_ENDPOINTS.register, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    fullName: fullName.trim(),
-                    email: email.trim().toLowerCase(),
-                    password,
-                    rePassword,
-                    phoneNumber: phoneNumber.trim() || null,
-                    avatarUrl: avatarUrl.trim() || null,
-                    birthYear: birthYear ? parseInt(birthYear, 10) : null,
-                    address: address.trim() || null,
-                    gender,
-                }),
+                body: formData,
             });
 
             const data = await response.json();
 
             if (response.status === 201 || response.ok) {
+                // Đăng ký thành công, tự động chuyển sang màn hình Verify
                 router.push({
                     pathname: '/verify' as any,
-                    params: { email: email.trim().toLowerCase() },
+                    params: {
+                        email: email.trim().toLowerCase(),
+                        type: 'SIGNUP' // Thêm type để màn hình OTP biết đây là luồng đăng ký
+                    },
                 });
             } else {
                 Alert.alert('Lỗi đăng ký', data?.message ?? 'Vui lòng thử lại.');
             }
-        } catch {
+        } catch (error) {
+            console.error('Lỗi kết nối khi đăng ký:', error);
             Alert.alert('Không thể kết nối', 'Vui lòng kiểm tra kết nối mạng.');
         } finally {
             setLoading(false);
@@ -116,7 +136,6 @@ export function useRegister() {
         // state mới
         rePassword, setRePassword,
         phoneNumber, setPhoneNumber,
-        avatarUrl, setAvatarUrl,
         birthYear, setBirthYear,
         address, setAddress,
         gender, setGender,

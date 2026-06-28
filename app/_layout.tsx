@@ -13,6 +13,7 @@ export default function RootLayout() {
                 <Stack.Screen name="forgot-password" options={{ headerShown: false }} />
                 <Stack.Screen name="verify"          options={{ headerShown: false }} />
                 <Stack.Screen name="reset-password"  options={{ headerShown: false }} />
+                <Stack.Screen name="resend-verify-email"  options={{ headerShown: false }} />
 
                 {/* ── App chính ── */}
                 <Stack.Screen name="tabs"            options={{ headerShown: false }} />

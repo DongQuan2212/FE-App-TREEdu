@@ -4,20 +4,23 @@ import { View, Text, ScrollView, StatusBar, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter }    from 'expo-router';
 
-import { MENU_SECTIONS }  from '@/src/constants/profile.constants';
-import ProfileCard        from '../../src/components/user/ProfileCard';
-import MenuSection        from '../../src/components/ui/MenuSection';
-import LogoutButton       from '../../src/components/ui/LogoutButton';
-import { useAuth }        from '@/src/context/AuthContext';
-import { mapCurrentUserToProfile } from '@/src/utils/profileAdapter';
+import { MENU_SECTIONS }        from '@/src/constants/profile.constants';
+import ProfileCard              from '../../src/components/user/ProfileCard';
+import MenuSection              from '../../src/components/ui/MenuSection';
+import LogoutButton             from '../../src/components/ui/LogoutButton';
+import { useAuth }              from '@/src/context/AuthContext';
+import { useProfile }           from '@/src/hooks/useProfile';
+import { mapProfileToUser }     from '@/src/utils/profileAdapter';
 
 export default function ProfileScreen() {
     const router           = useRouter();
-    const { user, logout } = useAuth();
+    const { user, logout } = useAuth();          // user chứa role từ /auth/current-user
+    const { profile, loading, refetch } = useProfile(); // data đầy đủ từ /users/me
 
-    // Map CurrentUser (BE) → User (profile.types) mà ProfileCard expect
-    // Trả về null nếu user chưa load → ProfileCard tự xử lý skeleton
-    const profileUser = user ? mapCurrentUserToProfile(user) : null;
+    // Map sang shape ProfileCard cần, null khi đang load
+    const profileUser = profile
+        ? mapProfileToUser(profile, user?.role)
+        : null;
 
     const handleLogout = () => {
         Alert.alert(
@@ -28,7 +31,7 @@ export default function ProfileScreen() {
                 {
                     text:    'Đăng xuất',
                     style:   'destructive',
-                    onPress: logout,   // ← xoá token + reset state, index.tsx tự redirect
+                    onPress: logout,
                 },
             ]
         );
@@ -43,11 +46,9 @@ export default function ProfileScreen() {
                 contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 24 }}
                 showsVerticalScrollIndicator={false}
             >
-            
-
                 {/* ── Profile card ── */}
                 <ProfileCard
-                    user={profileUser}                                           // ← dữ liệu thật, có thể null
+                    user={profileUser}          // null → skeleton tự hiện
                     onEdit={() => router.push('/profile/edit' as any)}
                     onChangePassword={() => router.push('/profile/change-password' as any)}
                 />

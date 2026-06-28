@@ -1,8 +1,4 @@
-// src/hooks/useMyProfile.ts
-//
-// Hook riêng để fetch GET /users/me.
-// Dùng tại HomeScreen để lấy gamification data (XP, streak, level...).
-// Tách khỏi AuthContext để AuthContext gọn, rõ trách nhiệm.
+
 // ─────────────────────────────────────────────────────────────────────────────
 import { useState, useEffect, useCallback } from 'react';
 import { getMyProfileApi } from '../constants/authApi';
