@@ -11,6 +11,12 @@ import { useAuth }        from '@/src/context/AuthContext';
 import { useMyProfile }   from '@/src/hooks/useMyProfile';
 import { useMyTree }      from '@/src/hooks/useMyTree';
 import { useLeaderboard } from '@/src/hooks/useLeaderboard';
+import { useNotifications } from '@/src/hooks/useNotifications';
+
+// 2. Import Components theo đúng đường dẫn trong ảnh của bạn
+import NotificationDropdown from '@/src/components/ui/NotificationDropdown';
+import NotificationDetailModal from '@/src/components/ui/NotificationDetailModal';
+
 
 const { width } = Dimensions.get('window');
 
@@ -140,6 +146,13 @@ const getLevelLabel = (level: number): string => {
     return 'Chuyên gia';
 };
 
+const getFullImageUrl = (url?: string | null): string | null => {
+    if (!url) return null;
+    if (url.startsWith('http')) return url;
+    const BASE_URL = 'http://10.0.2.2:3001';
+    return url.startsWith('/') ? `${BASE_URL}${url}` : `${BASE_URL}/${url}`;
+};
+
 // ── Shared Avatar component ────────────────────────────────────────────────
 function UserAvatar({
                         avatarUrl, initials, size, bg, textColor, borderColor,
@@ -223,7 +236,6 @@ function LeaderboardSection() {
 
     return (
         <View style={s.lbContainer}>
-            {/* Header */}
             <View style={s.lbHeader}>
                 <View>
                     <Text style={s.lbTitle}>Bảng xếp hạng</Text>
@@ -232,7 +244,6 @@ function LeaderboardSection() {
                 <Ionicons name="trophy-outline" size={22} color={C.amber} />
             </View>
 
-            {/* Tabs */}
             <View style={s.lbTabBar}>
                 {([
                     { key: 'STREAK'   as LBTab, label: 'Streak dài nhất', icon: 'flame' as const, activeColor: C.orange },
@@ -250,7 +261,6 @@ function LeaderboardSection() {
                 ))}
             </View>
 
-            {/* My rank badge */}
             {myRank && (
                 <View style={s.myRankBadge}>
                     <Ionicons name="trophy" size={11} color="#10B981" />
@@ -259,7 +269,6 @@ function LeaderboardSection() {
                 </View>
             )}
 
-            {/* Content */}
             {isLoading ? (
                 <View style={s.lbLoading}>
                     <ActivityIndicator size="small" color={C.brand} />
@@ -271,7 +280,6 @@ function LeaderboardSection() {
                 </View>
             ) : (
                 <>
-                    {/* Podium top 3 */}
                     {podiumOrder.length > 0 && (
                         <View style={s.podiumRow}>
                             {podiumOrder.map((entry) => {
@@ -283,10 +291,7 @@ function LeaderboardSection() {
 
                                 return (
                                     <View key={entry.userId} style={[s.podiumItem, { width: isTop1 ? 120 : 100 }]}>
-                                        {/* Crown */}
                                         {isTop1 && <Text style={s.podiumCrown}>👑</Text>}
-
-                                        {/* Avatar */}
                                         <View style={s.podiumAvatarWrap}>
                                             <UserAvatar
                                                 avatarUrl={entry.avatarUrl}
@@ -297,8 +302,6 @@ function LeaderboardSection() {
                                                 borderColor="#FFFFFF"
                                             />
                                         </View>
-
-                                        {/* Rank badge (not top1) */}
                                         {!isTop1 && (
                                             <View style={[s.podiumRankBadge, {
                                                 backgroundColor: entry.rank === 2 ? '#E5E7EB' : '#FFEDD5',
@@ -308,26 +311,19 @@ function LeaderboardSection() {
                                                 }]}>{entry.rank}</Text>
                                             </View>
                                         )}
-
-                                        {/* Name */}
                                         <Text style={[s.podiumName, { fontSize: isTop1 ? 12 : 11 }]} numberOfLines={1}>
                                             {entry.displayName ?? 'Ẩn danh'}
                                         </Text>
-
                                         {entry.isMe && (
                                             <View style={s.podiumMeBadge}>
                                                 <Text style={s.podiumMeText}>Bạn</Text>
                                             </View>
                                         )}
-
-                                        {/* Value */}
                                         <View style={s.podiumValue}>
                                             <Ionicons name={iconName} size={11} color={valColor} />
                                             <Text style={[s.podiumValueText, { color: valColor }]}>{entry.value}</Text>
                                             <Text style={s.podiumUnit}>{unit}</Text>
                                         </View>
-
-                                        {/* Block */}
                                         <View style={[s.podiumBlock, {
                                             height: blockH,
                                             backgroundColor: isTop1 ? '#FEF9C3' : entry.rank === 2 ? '#F9FAFB' : '#FFF7ED',
@@ -341,7 +337,6 @@ function LeaderboardSection() {
                         </View>
                     )}
 
-                    {/* Rest list hạng 4+ */}
                     {rest.length > 0 && (
                         <View style={s.restList}>
                             {rest.map((entry) => {
@@ -415,6 +410,14 @@ function TestimonialsSection() {
 
 // ── Main ───────────────────────────────────────────────────────────────────
 export default function HomeScreen() {
+    const {
+        notifications,
+        unreadCount,
+        markAsRead,
+        markAllAsRead
+    } = useNotifications();
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const [selectedNotif, setSelectedNotif]   = useState<any>(null);
     const router = useRouter();
     const { user }   = useAuth();
     const { profile, loading: profileLoading, refreshing, refresh } = useMyProfile();
@@ -437,6 +440,20 @@ export default function HomeScreen() {
         await Promise.all([refresh(), refreshTree()]);
     };
 
+    // Bạn có thể lấy số lượng thông báo chưa đọc từ API ở đây
+    const unreadNotificationsCount = 3;
+    const handleNotificationClick = async (notif: any) => {
+        // Đóng dropdown list lại
+        setIsDropdownOpen(false);
+
+        // Mở Modal chi tiết và truyền data vào
+        setSelectedNotif(notif);
+
+        // Đánh dấu đã đọc gọi API (nếu notif đó chưa đọc)
+        if (!notif.isRead) {
+            await markAsRead(notif._id);
+        }
+    };
     return (
         <SafeAreaView style={s.safe}>
             <StatusBar barStyle="light-content" backgroundColor={C.brandDark} />
@@ -445,9 +462,47 @@ export default function HomeScreen() {
             <View style={s.heroBanner}>
                 <View style={s.bannerCircle1} />
                 <View style={s.bannerCircle2} />
+
+                {/* HÀNG TRÊN: Lời chào và Icon Thông báo */}
+                <View style={s.headerTopRow}>
+                    <Text style={s.bannerGreeting}>{greeting}</Text>
+
+                    <TouchableOpacity
+                        style={styles.bellButton}
+                        onPress={() => setIsDropdownOpen(true)}
+                    >
+                        <Ionicons name="notifications-outline" size={24} color="#333" />
+                        {unreadCount > 0 && (
+                            <View style={styles.badge}>
+                                <Text style={styles.badgeText}>
+                                    {unreadCount > 99 ? '99+' : unreadCount}
+                                </Text>
+                            </View>
+                        )}
+                    </TouchableOpacity>
+                </View>
+                isDropdownOpen && (
+                <NotificationDropdown
+                    visible={isDropdownOpen}
+                    onClose={() => setIsDropdownOpen(false)}
+                    notifications={notifications}
+                    unreadCount={unreadCount}
+                    onMarkAllRead={markAllAsRead}
+                    onNotificationClick={handleNotificationClick} // Truyền hàm xử lý vào
+                />
+                )
+
+                {/* 2. Modal Detail (Xem chi tiết 1 thông báo) */}
+                {selectedNotif && (
+                    <NotificationDetailModal
+                        visible={!!selectedNotif} // Có data là true (mở), null là false (đóng)
+                        notification={selectedNotif}
+                        onClose={() => setSelectedNotif(null)} // Đóng modal bằng cách set về null
+                    />
+                )}
+                {/* HÀNG DƯỚI: Info người dùng */}
                 <View style={s.bannerRow}>
                     <View style={s.bannerLeft}>
-                        <Text style={s.bannerGreeting}>{greeting}</Text>
                         <Text style={s.bannerName}>{shortName}</Text>
                         <View style={s.levelBadge}>
                             <Ionicons name="star" size={11} color="#FBBF24" />
@@ -455,7 +510,6 @@ export default function HomeScreen() {
                         </View>
                     </View>
                     <View style={s.bannerRight}>
-                        {/* Avatar — dùng avatarUrl từ profile nếu có */}
                         <UserAvatar
                             avatarUrl={profile?.avatarUrl}
                             initials={initials}
@@ -626,9 +680,25 @@ const s = StyleSheet.create({
     heroBanner:     { backgroundColor: C.brandDark, overflow: 'hidden', paddingHorizontal: SP.md, paddingTop: SP.md, paddingBottom: SP.lg + 4 },
     bannerCircle1:  { position: 'absolute', width: 160, height: 160, borderRadius: 80,  backgroundColor: '#4A8020', opacity: 0.45, right: -40, top: -50 },
     bannerCircle2:  { position: 'absolute', width: 100, height: 100, borderRadius: 50,  backgroundColor: '#6AAD30', opacity: 0.25, left: -20, bottom: -30 },
+
+    // Header Row mới thêm
+    headerTopRow:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 },
+    bannerGreeting: { fontSize: 13, color: 'rgba(255,255,255,0.75)', fontWeight: '500', letterSpacing: 0.3 },
+    notificationBtn:{ position: 'relative', padding: 4 },
+    notificationBadge: {
+        position: 'absolute',
+        top: 2, right: 2,
+        backgroundColor: '#EF4444',
+        minWidth: 16, height: 16,
+        borderRadius: 8,
+        justifyContent: 'center', alignItems: 'center',
+        paddingHorizontal: 3,
+        borderWidth: 1.5, borderColor: C.brandDark
+    },
+    notificationBadgeText: { color: '#FFFFFF', fontSize: 9, fontWeight: 'bold' },
+
     bannerRow:      { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
     bannerLeft:     { flex: 1, paddingRight: SP.sm },
-    bannerGreeting: { fontSize: 12, color: 'rgba(255,255,255,0.65)', fontWeight: '500', marginBottom: 4, letterSpacing: 0.3 },
     bannerName:     { fontSize: 22, fontWeight: '800', color: '#FFFFFF', marginBottom: 6 },
     levelBadge:     { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
     levelText:      { fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.9)' },
@@ -649,104 +719,130 @@ const s = StyleSheet.create({
     sectionLabel: { fontSize: 11, fontWeight: '600', color: C.muted, letterSpacing: 0.8, marginBottom: SP.sm },
 
     gridRow:     { flexDirection: 'row', gap: SP.sm, marginBottom: SP.sm },
-    card:        { flex: 1, backgroundColor: C.surface, borderRadius: 24, padding: SP.md },
-    iconBox:     { width: 48, height: 48, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginBottom: SP.sm },
-    cardTitle:   { fontSize: 15, fontWeight: '800', color: C.text, marginBottom: 4 },
-    cardDesc:    { fontSize: 11, color: C.muted, lineHeight: 16, marginBottom: SP.md, flex: 1 },
-    cardBtn:     { height: 40, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, overflow: 'hidden' },
-    cardBtnText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700' },
+    card:        { flex: 1, backgroundColor: C.surface, borderRadius: 20, padding: SP.md, justifyContent: 'space-between' },
+    iconBox:     { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
+    cardTitle:   { fontSize: 16, fontWeight: '700', color: C.text, marginBottom: 4 },
+    cardDesc:    { fontSize: 12, color: C.muted, lineHeight: 18, marginBottom: 16, minHeight: 36 },
+    cardBtn:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, borderRadius: 12, overflow: 'hidden' },
+    cardBtnText: { color: '#FFF', fontSize: 13, fontWeight: '700' },
 
-    dictationCard:      { backgroundColor: '#FFF7ED', borderRadius: 24, padding: SP.md, marginBottom: SP.sm, overflow: 'hidden', minHeight: 130, borderWidth: 1.5, borderColor: '#FFEDD5' },
-    dictationBlob1:     { position: 'absolute', width: 110, height: 110, borderRadius: 55, backgroundColor: '#FED7AA', right: -20, top: -20, opacity: 0.6 },
-    dictationBlob2:     { position: 'absolute', width: 70,  height: 70,  borderRadius: 35, backgroundColor: '#FDBA74', right: 35,  bottom: -20, opacity: 0.4 },
-    dictationRow:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-    dictationLeft:      { flex: 1 },
-    dictationBadge:     { alignSelf: 'flex-start', backgroundColor: '#FFEDD5', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4, marginBottom: 8 },
-    dictationBadgeText: { fontSize: 11, fontWeight: '700', color: C.orange, letterSpacing: 0.3 },
-    dictationTitle:     { fontSize: 18, fontWeight: '800', color: C.orange, marginBottom: 4, lineHeight: 24 },
-    dictationDesc:      { fontSize: 11, color: '#9A3412', opacity: 0.7, lineHeight: 16, marginBottom: SP.sm },
-    dictationBtn:       { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', backgroundColor: '#FFEDD5', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8 },
+    dictationCard:      { backgroundColor: C.orangeLight, borderRadius: 24, padding: SP.md, overflow: 'hidden', marginBottom: SP.sm },
+    dictationBlob1:     { position: 'absolute', width: 120, height: 120, borderRadius: 60, backgroundColor: C.orange, opacity: 0.08, right: -30, top: -40 },
+    dictationBlob2:     { position: 'absolute', width: 80, height: 80, borderRadius: 40, backgroundColor: C.orange, opacity: 0.08, left: -20, bottom: -20 },
+    dictationRow:       { flexDirection: 'row', alignItems: 'center' },
+    dictationLeft:      { flex: 1, paddingRight: SP.sm },
+    dictationBadge:     { backgroundColor: '#FFFFFF', alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, marginBottom: 8 },
+    dictationBadgeText: { fontSize: 10, fontWeight: '700', color: C.orange },
+    dictationTitle:     { fontSize: 18, fontWeight: '800', color: '#9A3412', marginBottom: 6, lineHeight: 22 },
+    dictationDesc:      { fontSize: 12, color: '#C2410C', lineHeight: 18, marginBottom: 12 },
+    dictationBtn:       { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#FFFFFF', alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12 },
     dictationBtnText:   { fontSize: 13, fontWeight: '700', color: C.orange },
-    dictationIconWrap:  { width: 80, height: 80, alignItems: 'center', justifyContent: 'center' },
-    dictationRing3:     { position: 'absolute', width: 78, height: 78, borderRadius: 39, backgroundColor: '#FED7AA', opacity: 0.3 },
-    dictationRing2:     { position: 'absolute', width: 58, height: 58, borderRadius: 29, backgroundColor: '#FDBA74', opacity: 0.35 },
-    dictationRing1:     { position: 'absolute', width: 44, height: 44, borderRadius: 22, backgroundColor: '#FB923C', opacity: 0.25 },
-    dictationCore:      { width: 40, height: 40, borderRadius: 20, backgroundColor: '#FFEDD5', alignItems: 'center', justifyContent: 'center' },
+    dictationIconWrap:  { width: 70, height: 70, alignItems: 'center', justifyContent: 'center' },
+    dictationRing3:     { position: 'absolute', width: 70, height: 70, borderRadius: 35, backgroundColor: C.orange, opacity: 0.1 },
+    dictationRing2:     { position: 'absolute', width: 54, height: 54, borderRadius: 27, backgroundColor: C.orange, opacity: 0.2 },
+    dictationRing1:     { position: 'absolute', width: 38, height: 38, borderRadius: 19, backgroundColor: C.orange, opacity: 0.3 },
+    dictationCore:      { width: 44, height: 44, borderRadius: 22, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', elevation: 2 },
 
-    heroCard:        { backgroundColor: '#FAF5FF', borderRadius: 24, padding: SP.md, marginBottom: SP.lg, overflow: 'hidden', minHeight: 140 },
-    heroBlobA:       { position: 'absolute', width: 120, height: 120, borderRadius: 60, backgroundColor: '#EDE9FE', right: -20, top: -20, opacity: 0.7 },
-    heroBlobB:       { position: 'absolute', width: 80,  height: 80,  borderRadius: 40, backgroundColor: '#DDD6FE', right: 40,  bottom: -20, opacity: 0.5 },
-    aiBadge:         { alignSelf: 'flex-start', backgroundColor: '#EDE9FE', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4, marginBottom: SP.sm },
-    aiBadgeText:     { fontSize: 11, fontWeight: '700', color: C.purple, letterSpacing: 0.4 },
-    heroCardRow:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-    heroCardLeft:    { flex: 1 },
-    heroCardTitle:   { fontSize: 20, fontWeight: '800', color: C.purple, marginBottom: 4 },
-    heroCardDesc:    { fontSize: 12, color: '#7C3AED', opacity: 0.7, lineHeight: 17, marginBottom: SP.sm },
-    heroCardBtn:     { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', backgroundColor: '#EDE9FE', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8 },
-    heroCardBtnText: { fontSize: 13, fontWeight: '700', color: C.purple },
-    micWrap:  { width: 90, height: 90, alignItems: 'center', justifyContent: 'center' },
-    micRing3: { position: 'absolute', width: 88, height: 88, borderRadius: 44, backgroundColor: '#DDD6FE', opacity: 0.3 },
-    micRing2: { position: 'absolute', width: 66, height: 66, borderRadius: 33, backgroundColor: '#C4B5FD', opacity: 0.35 },
-    micRing1: { position: 'absolute', width: 50, height: 50, borderRadius: 25, backgroundColor: '#A78BFA', opacity: 0.25 },
-    micCore:  { width: 44, height: 44, borderRadius: 22, backgroundColor: '#EDE9FE', alignItems: 'center', justifyContent: 'center' },
+    heroCard:     { backgroundColor: C.purple, borderRadius: 24, padding: SP.md, overflow: 'hidden', marginBottom: SP.lg },
+    heroBlobA:    { position: 'absolute', width: 140, height: 140, borderRadius: 70, backgroundColor: '#9333EA', opacity: 0.8, right: -40, top: -40 },
+    heroBlobB:    { position: 'absolute', width: 100, height: 100, borderRadius: 50, backgroundColor: '#6B21A8', opacity: 0.6, left: -20, bottom: -30 },
+    aiBadge:      { position: 'absolute', top: SP.md, right: SP.md, backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 },
+    aiBadgeText:  { fontSize: 10, fontWeight: '800', color: '#FFF', letterSpacing: 0.5 },
+    heroCardRow:  { flexDirection: 'row', alignItems: 'center', marginTop: 12 },
+    heroCardLeft: { flex: 1, paddingRight: SP.sm },
+    heroCardTitle:{ fontSize: 20, fontWeight: '900', color: '#FFF', marginBottom: 4 },
+    heroCardDesc: { fontSize: 13, color: C.purpleLight, opacity: 0.9, lineHeight: 18, marginBottom: 16 },
+    heroCardBtn:  { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FFF', alignSelf: 'flex-start', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 14 },
+    heroCardBtnText: { fontSize: 14, fontWeight: '800', color: C.purple },
+    micWrap:      { width: 80, height: 80, alignItems: 'center', justifyContent: 'center' },
+    micRing3:     { position: 'absolute', width: 80, height: 80, borderRadius: 40, backgroundColor: '#FFF', opacity: 0.1 },
+    micRing2:     { position: 'absolute', width: 60, height: 60, borderRadius: 30, backgroundColor: '#FFF', opacity: 0.2 },
+    micRing1:     { position: 'absolute', width: 40, height: 40, borderRadius: 20, backgroundColor: '#FFF', opacity: 0.3 },
+    micCore:      { width: 48, height: 48, borderRadius: 24, backgroundColor: '#FFF', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 8, elevation: 5 },
 
     lbContainer:  { backgroundColor: C.surface, borderRadius: 24, padding: SP.md, marginBottom: SP.lg },
-    lbHeader:     { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: SP.sm },
-    lbTitle:      { fontSize: 17, fontWeight: '800', color: C.text },
-    lbSubtitle:   { fontSize: 11, color: C.muted, marginTop: 2 },
-    lbTabBar:     { flexDirection: 'row', backgroundColor: C.mutedLight, borderRadius: 14, padding: 3, marginBottom: SP.sm },
-    lbTab:        { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, paddingVertical: 8, borderRadius: 11 },
-    lbTabActive:  { backgroundColor: C.surface },
-    lbTabText:    { fontSize: 12, fontWeight: '600', color: C.muted },
-    myRankBadge:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, backgroundColor: C.mutedLight, borderRadius: 20, paddingVertical: 6, paddingHorizontal: 12, alignSelf: 'center', marginBottom: SP.sm },
-    myRankText:   { fontSize: 12, color: C.muted },
-    myRankNum:    { fontSize: 12, fontWeight: '800', color: C.text },
-    lbLoading:    { height: 120, alignItems: 'center', justifyContent: 'center' },
+    lbHeader:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: SP.md },
+    lbTitle:      { fontSize: 16, fontWeight: '800', color: C.text, marginBottom: 2 },
+    lbSubtitle:   { fontSize: 12, color: C.muted },
+    lbTabBar:     { flexDirection: 'row', backgroundColor: C.mutedLight, borderRadius: 12, marginBottom: SP.md },
+    lbTab:        { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, borderRadius: 10 },
+    lbTabActive:  { backgroundColor: '#FFFFFF', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, elevation: 1 },
+    lbTabText:    { fontSize: 13, fontWeight: '700', color: C.muted },
+    myRankBadge:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#ECFDF5', paddingVertical: 8, borderRadius: 12, marginBottom: SP.md, gap: 4 },
+    myRankText:   { fontSize: 12, color: '#047857', fontWeight: '600' },
+    myRankNum:    { fontSize: 14, color: '#047857', fontWeight: '800' },
+    lbLoading:    { height: 100, alignItems: 'center', justifyContent: 'center' },
     lbEmpty:      { height: 120, alignItems: 'center', justifyContent: 'center', gap: 8 },
     lbEmptyText:  { fontSize: 13, color: C.muted },
+    podiumRow:    { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center', gap: 8, marginBottom: SP.lg, marginTop: SP.sm, paddingHorizontal: 10 },
+    podiumItem:   { alignItems: 'center' },
+    podiumCrown:  { fontSize: 24, marginBottom: 4 },
+    podiumAvatarWrap: { marginBottom: 8, zIndex: 2 },
+    podiumRankBadge: { position: 'absolute', top: -10, width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#FFFFFF', zIndex: 3 },
+    podiumRankBadgeText: { fontSize: 10, fontWeight: '800' },
+    podiumName:   { fontWeight: '700', color: C.text, marginBottom: 2, textAlign: 'center' },
+    podiumMeBadge:{ backgroundColor: C.brandLight, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, marginBottom: 4 },
+    podiumMeText: { fontSize: 9, fontWeight: '800', color: C.brandDark },
+    podiumValue:  { flexDirection: 'row', alignItems: 'center', gap: 2, marginBottom: 8 },
+    podiumValueText: { fontSize: 12, fontWeight: '800' },
+    podiumUnit:   { fontSize: 10, color: C.muted, fontWeight: '600' },
+    podiumBlock:  { width: '100%', borderTopLeftRadius: 16, borderTopRightRadius: 16, borderWidth: 1, borderBottomWidth: 0, alignItems: 'center', paddingTop: SP.sm },
+    podiumBlockNum: { fontSize: 32, fontWeight: '900', color: '#FCD34D', opacity: 0.5 },
+    restList:     { gap: SP.sm },
+    restRow:      { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F9FAFB', padding: SP.sm, borderRadius: 16, gap: SP.sm },
+    restRowMe:    { backgroundColor: C.brandLight, borderWidth: 1, borderColor: '#D9F99D' },
+    restRank:     { width: 24, textAlign: 'center', fontSize: 14, fontWeight: '700', color: C.muted },
+    restInfo:     { flex: 1, justifyContent: 'center' },
+    restNameRow:  { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 },
+    restName:     { fontSize: 14, fontWeight: '700', color: C.text, flexShrink: 1 },
+    meBadge:      { backgroundColor: C.brand, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
+    meBadgeText:  { fontSize: 9, fontWeight: '800', color: '#FFFFFF' },
+    restLevel:    { fontSize: 11, color: C.muted },
+    restValueRow: { alignItems: 'flex-end', justifyContent: 'center' },
+    restValue:    { fontSize: 14, fontWeight: '800', color: C.text },
+    restUnit:     { fontSize: 10, color: C.muted, fontWeight: '600' },
 
-    podiumRow:           { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center', gap: SP.xs, marginBottom: SP.md, paddingTop: SP.lg },
-    podiumItem:          { alignItems: 'center' },
-    podiumCrown:         { fontSize: 20, marginBottom: 4 },
-    podiumAvatarWrap:    { marginBottom: 4 },
-    podiumRankBadge:     { position: 'absolute', top: -4, right: -4, width: 18, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#FFFFFF' },
-    podiumRankBadgeText: { fontSize: 9, fontWeight: '700' },
-    podiumName:          { fontSize: 11, fontWeight: '600', color: C.text, textAlign: 'center', marginBottom: 2, maxWidth: 110 },
-    podiumMeBadge:       { backgroundColor: '#D1FAE5', borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2, marginBottom: 4 },
-    podiumMeText:        { fontSize: 9, fontWeight: '700', color: '#065F46' },
-    podiumValue:         { flexDirection: 'row', alignItems: 'center', gap: 2, marginBottom: 6 },
-    podiumValueText:     { fontSize: 12, fontWeight: '800' },
-    podiumUnit:          { fontSize: 10, color: C.muted },
-    podiumBlock:         { width: '100%', borderRadius: 12, borderWidth: 1, alignItems: 'center', paddingTop: 8 },
-    podiumBlockNum:      { fontSize: 18, fontWeight: '800', color: '#D97706' },
+    whyScroll:    { paddingBottom: SP.md, gap: SP.sm },
+    whyCard:      { width: width * 0.44, backgroundColor: C.surface, borderRadius: 20, padding: SP.md },
+    whyIconBox:   { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
+    whyKeyword:   { fontSize: 14, fontWeight: '800', marginBottom: 4 },
+    whySub:       { fontSize: 12, color: C.muted, lineHeight: 18 },
 
-    restList:       { gap: 6 },
-    restRow:        { flexDirection: 'row', alignItems: 'center', gap: SP.sm, paddingVertical: 10, paddingHorizontal: SP.sm, borderRadius: 16, backgroundColor: C.bg, borderWidth: 1, borderColor: 'transparent' },
-    restRowMe:      { borderColor: '#6EE7B7' },
-    restRank:       { width: 20, textAlign: 'center', fontSize: 12, fontWeight: '600', color: C.muted },
-    restInfo:       { flex: 1, minWidth: 0 },
-    restNameRow:    { flexDirection: 'row', alignItems: 'center', gap: 5 },
-    restName:       { fontSize: 13, fontWeight: '600', color: C.text, flexShrink: 1 },
-    restLevel:      { fontSize: 11, color: C.muted, marginTop: 1 },
-    restValueRow:   { flexDirection: 'row', alignItems: 'center', gap: 3 },
-    restValue:      { fontSize: 13, fontWeight: '700', color: '#4B5563' },
-    restUnit:       { fontSize: 11, color: C.muted },
-    meBadge:        { backgroundColor: '#D1FAE5', borderRadius: 8, paddingHorizontal: 5, paddingVertical: 1 },
-    meBadgeText:    { fontSize: 9, fontWeight: '700', color: '#065F46' },
-
-    whyScroll:  { paddingRight: SP.md, paddingBottom: 4, gap: SP.sm },
-    whyCard:    { width: width * 0.42, backgroundColor: C.surface, borderRadius: 20, padding: SP.md, alignItems: 'flex-start' },
-    whyIconBox: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginBottom: SP.sm },
-    whyKeyword: { fontSize: 14, fontWeight: '800', marginBottom: 3 },
-    whySub:     { fontSize: 11, color: C.muted, lineHeight: 16 },
-
-    testimonialContainer:  { marginBottom: SP.lg },
-    testimonialTitle:      { fontSize: 16, fontWeight: '800', color: C.text, marginBottom: SP.sm },
-    testimonialScroll:     { paddingRight: SP.md, gap: SP.sm },
-    testimonialCard:       { width: width * 0.72, backgroundColor: C.surface, borderRadius: 20, padding: SP.md },
-    testimonialAvatar:     { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', marginBottom: SP.xs },
-    testimonialAvatarText: { fontSize: 16, fontWeight: '800' },
-    testimonialStars:      { fontSize: 16, color: '#FBBF24', marginBottom: SP.xs },
-    testimonialQuote:      { fontSize: 13, color: '#374151', fontStyle: 'italic', lineHeight: 19, marginBottom: SP.xs },
-    testimonialName:       { fontSize: 12, fontWeight: '700', color: C.muted },
+    testimonialContainer: { marginBottom: SP.lg },
+    testimonialTitle:     { fontSize: 18, fontWeight: '800', color: C.text, marginBottom: SP.sm, paddingHorizontal: SP.xs },
+    testimonialScroll:    { paddingBottom: SP.md, gap: SP.sm },
+    testimonialCard:      { width: width * 0.75, backgroundColor: C.surface, borderRadius: 20, padding: SP.md },
+    testimonialAvatar:    { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
+    testimonialAvatarText:{ fontSize: 14, fontWeight: '800' },
+    testimonialStars:     { color: '#FBBF24', fontSize: 14, marginBottom: 8, letterSpacing: 2 },
+    testimonialQuote:     { fontSize: 14, color: C.text, fontStyle: 'italic', lineHeight: 20, marginBottom: 12 },
+    testimonialName:      { fontSize: 12, fontWeight: '700', color: C.muted },
+});
+const styles = StyleSheet.create({
+    container: { flex: 1, backgroundColor: '#fff' },
+    header: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        paddingTop: 50, // Căn theo tai thỏ/status bar
+        paddingBottom: 15,
+        backgroundColor: '#fff',
+    },
+    headerText: { fontSize: 20, fontWeight: 'bold' },
+    bellButton: { position: 'relative', padding: 5 },
+    badge: {
+        position: 'absolute',
+        top: 0,
+        right: 0,
+        backgroundColor: '#EF4444',
+        minWidth: 18,
+        height: 18,
+        borderRadius: 9,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 2,
+        borderColor: '#fff',
+    },
+    badgeText: { color: '#fff', fontSize: 10, fontWeight: 'bold' }
 });

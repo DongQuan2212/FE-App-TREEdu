@@ -262,15 +262,31 @@ export default function LoginScreen() {
                         </TouchableOpacity>
 
                         {/* ── Footer ── */}
-                        <View className="flex-row justify-center">
-                            <Text className="text-[13px] text-gray-400">
-                                Chưa có tài khoản?{' '}
-                            </Text>
-                            <TouchableOpacity onPress={() => router.push('/register')}>
-                                <Text className="text-[13px] font-bold text-[#7CB342]">
-                                    Đăng ký ngay
+                        {/* ── Footer ── */}
+                        <View className="items-center gap-y-4">
+                            {/* Đăng ký */}
+                            <View className="flex-row justify-center">
+                                <Text className="text-[13px] text-gray-400">
+                                    Chưa có tài khoản?{' '}
                                 </Text>
-                            </TouchableOpacity>
+                                <TouchableOpacity onPress={() => router.push('/register')}>
+                                    <Text className="text-[13px] font-bold text-[#7CB342]">
+                                        Đăng ký ngay
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+
+                            {/* ── DÒNG TEXT ĐƯỢC THÊM MỚI Ở ĐÂY ── */}
+                            <View className="flex-row justify-center">
+                                <Text className="text-[13px] text-gray-400">
+                                    Tài khoản chưa kích hoạt?{' '}
+                                </Text>
+                                <TouchableOpacity onPress={() => router.push('/resend-verify-email' as any)}>
+                                    <Text className="text-[13px] font-bold text-[#7CB342]">
+                                        Kích hoạt tại đây
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
                         </View>
                     </View>
                 </ScrollView>

@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
     View, Text, TouchableOpacity, StatusBar,
     Animated, Dimensions, ActivityIndicator, Alert,
+    TextInput, Keyboard,
 } from 'react-native';
 import { SafeAreaView }          from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -110,6 +111,11 @@ export default function FlashcardLearnScreen() {
     const [resetting,    setResetting]    = useState(false);
     const [isFlipped,    setIsFlipped]    = useState(false);
 
+    // Typing states
+    const [userAnswer,   setUserAnswer]   = useState('');
+    const [submitting,   setSubmitting]   = useState(false);
+    const [checkResult,  setCheckResult]  = useState<{ correct: boolean } | null>(null);
+
     // XP banner
     const [xpBanner, setXpBanner] = useState<{ xp: number; level: number; leveledUp: boolean } | null>(null);
 
@@ -120,6 +126,11 @@ export default function FlashcardLearnScreen() {
 
     const animateTo = (val: number) => {
         Animated.spring(flipAnim, { toValue: val, friction: 8, tension: 10, useNativeDriver: true }).start();
+    };
+
+    const resetTypingState = () => {
+        setUserAnswer('');
+        setCheckResult(null);
     };
 
     const handleFlip = () => {
@@ -147,27 +158,40 @@ export default function FlashcardLearnScreen() {
         })();
     }, [id]);
 
-    // ── Next word ──────────────────────────────────────────
-    const handleNext = async () => {
+    // ── Submit answer (check typing) ───────────────────────
+    const handleSubmitAnswer = async (currentWord: FlashcardWord) => {
+        if (!userAnswer.trim() || submitting || checkResult?.correct) return;
+        Keyboard.dismiss();
+
+        const isCorrect = userAnswer.trim().toLowerCase() === currentWord.newWord.toLowerCase();
+        setCheckResult({ correct: isCorrect });
+
+        if (isCorrect) {
+            // Proceed to next word after short delay
+            setTimeout(() => {
+                handleNext(currentWord);
+            }, 900);
+        }
+        // If wrong, user stays and can retry (checkResult.correct === false keeps input red)
+    };
+
+    // ── Next word (called after correct answer) ────────────
+    const handleNext = async (currentWord: FlashcardWord) => {
         if (!id) return;
-        const unviewed = words.filter(w => !viewedIds.includes(w.id));
-        if (!unviewed[0]) return;
 
-        const wordId = unviewed[0].id;
         try {
-            const res = await markWordViewedApi(id, wordId);
+            const res = await markWordViewedApi(id, currentWord.id);
 
-            // Lật về front trước
             animateTo(0);
             setTimeout(() => {
                 setIsFlipped(false);
-                setViewedIds(Array.from(res.viewedWordIds ?? [...viewedIds, wordId]));
+                resetTypingState();
+                setViewedIds(Array.from(res.viewedWordIds ?? [...viewedIds, currentWord.id]));
 
-                // Hiện XP banner khi hoàn thành (status = DONE)
                 if (res.status === 'DONE' && res.xpGained) {
                     setXpBanner({
-                        xp:       res.xpGained,
-                        level:    res.currentLevel ?? 1,
+                        xp:        res.xpGained,
+                        level:     res.currentLevel ?? 1,
                         leveledUp: res.leveledUp ?? false,
                     });
                 }
@@ -187,10 +211,11 @@ export default function FlashcardLearnScreen() {
                     if (!id) return;
                     setResetting(true);
                     try {
-                        const res = await resetLearnApi(id);
+                        await resetLearnApi(id);
                         setViewedIds([]);
                         animateTo(0);
                         setIsFlipped(false);
+                        resetTypingState();
                     } catch (err: any) {
                         Alert.alert('Lỗi', err?.response?.data?.message ?? 'Không thể reset.');
                     } finally {
@@ -214,6 +239,17 @@ export default function FlashcardLearnScreen() {
     const isCompleted = unviewed.length === 0 && words.length > 0;
     const currentWord = unviewed[0];
     const progress    = totalWords > 0 ? Math.round((viewedIds.length / totalWords) * 100) : 0;
+
+    // Input border/bg based on check result
+    const inputBorderColor = checkResult === null
+        ? '#D1D5DB'
+        : checkResult.correct ? '#10B981' : '#F87171';
+    const inputBgColor = checkResult === null
+        ? '#FFFFFF'
+        : checkResult.correct ? '#F0FDF4' : '#FEF2F2';
+    const inputTextColor = checkResult === null
+        ? '#111827'
+        : checkResult.correct ? '#065F46' : '#B91C1C';
 
     return (
         <SafeAreaView className="flex-1 bg-[#F9FAFB]">
@@ -240,7 +276,7 @@ export default function FlashcardLearnScreen() {
 
                 {/* Progress bar */}
                 {!isCompleted && (
-                    <View className="mb-8">
+                    <View className="mb-6">
                         <View className="flex-row justify-between items-center mb-2">
                             <Text className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Tiến độ</Text>
                             <Text className="text-[11px] font-bold text-gray-500">
@@ -309,37 +345,123 @@ export default function FlashcardLearnScreen() {
                                 borderBottomWidth: 4, borderBottomColor: '#86EFAC',
                                 shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
                                 shadowOpacity: 0.08, shadowRadius: 16, elevation: 6,
+                                paddingHorizontal: 20, paddingVertical: 24,
                             }}>
                                 <View className="absolute top-5 left-5 bg-white px-3 py-1 rounded-full border border-emerald-100">
                                     <Text className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">Định nghĩa</Text>
                                 </View>
-                                <View className="flex-1 items-center justify-center px-6">
-                                    <Text className="text-xs font-bold text-emerald-500 uppercase tracking-widest mb-3">Ý nghĩa</Text>
-                                    <Text
-                                        style={{ fontSize: 32, fontWeight: '800', color: '#111827', textAlign: 'center' }}
-                                        adjustsFontSizeToFit numberOfLines={3}
-                                    >
-                                        {currentWord.meaning}
-                                    </Text>
-                                    {currentWord.wordForm ? (
-                                        <View className="mt-4 px-3 py-1 bg-white rounded-full border border-emerald-100">
-                                            <Text className="text-xs font-semibold text-emerald-600">{currentWord.wordForm}</Text>
-                                        </View>
-                                    ) : null}
-                                </View>
+
+                                {/* Stop tap-to-flip when interacting with input area */}
+                                <TouchableOpacity
+                                    activeOpacity={1}
+                                    onPress={() => {/* absorb tap */}}
+                                    style={{ flex: 1, marginTop: 36 }}
+                                >
+                                    {/* Meaning */}
+                                    <View style={{ alignItems: 'center', marginBottom: 12 }}>
+                                        <Text className="text-xs font-bold text-emerald-500 uppercase tracking-widest mb-2">Ý nghĩa</Text>
+                                        <Text
+                                            style={{ fontSize: 28, fontWeight: '800', color: '#111827', textAlign: 'center' }}
+                                            adjustsFontSizeToFit numberOfLines={2}
+                                        >
+                                            {currentWord.meaning}
+                                        </Text>
+                                        {currentWord.wordForm ? (
+                                            <View className="mt-2 px-3 py-1 bg-white rounded-full border border-emerald-100">
+                                                <Text className="text-xs font-semibold text-emerald-600">{currentWord.wordForm}</Text>
+                                            </View>
+                                        ) : null}
+                                    </View>
+
+                                    {/* Typing area */}
+                                    <View style={{ marginTop: 8 }}>
+                                        <Text style={{ fontSize: 10, fontWeight: '700', color: '#10B981', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>
+                                            Gõ lại từ vựng
+                                        </Text>
+                                        <TextInput
+                                            value={userAnswer}
+                                            onChangeText={(text) => {
+                                                // Allow editing only if not yet correct
+                                                if (!checkResult?.correct) {
+                                                    setUserAnswer(text);
+                                                    // Clear wrong state when user starts typing again
+                                                    if (checkResult) setCheckResult(null);
+                                                }
+                                            }}
+                                            onSubmitEditing={() => handleSubmitAnswer(currentWord)}
+                                            placeholder="Nhập từ vựng..."
+                                            placeholderTextColor="#9CA3AF"
+                                            editable={!submitting && !checkResult?.correct}
+                                            autoCapitalize="none"
+                                            autoCorrect={false}
+                                            returnKeyType="done"
+                                            style={{
+                                                borderWidth: 2,
+                                                borderColor: inputBorderColor,
+                                                backgroundColor: inputBgColor,
+                                                borderRadius: 14,
+                                                paddingHorizontal: 16,
+                                                paddingVertical: 12,
+                                                fontSize: 18,
+                                                fontWeight: '700',
+                                                color: inputTextColor,
+                                                textAlign: 'center',
+                                            }}
+                                        />
+
+                                        {/* Feedback text */}
+                                        {checkResult && (
+                                            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, marginTop: 6 }}>
+                                                <Ionicons
+                                                    name={checkResult.correct ? 'checkmark-circle' : 'close-circle'}
+                                                    size={15}
+                                                    color={checkResult.correct ? '#10B981' : '#EF4444'}
+                                                />
+                                                <Text style={{
+                                                    fontSize: 13, fontWeight: '600',
+                                                    color: checkResult.correct ? '#10B981' : '#EF4444',
+                                                }}>
+                                                    {checkResult.correct ? 'Chính xác!' : 'Chưa đúng, thử lại nhé'}
+                                                </Text>
+                                            </View>
+                                        )}
+
+                                        {/* Check button */}
+                                        <TouchableOpacity
+                                            onPress={() => handleSubmitAnswer(currentWord)}
+                                            disabled={submitting || !userAnswer.trim() || checkResult?.correct === true}
+                                            style={{
+                                                marginTop: 10,
+                                                backgroundColor: (submitting || !userAnswer.trim() || checkResult?.correct) ? '#D1FAE5' : '#10B981',
+                                                borderRadius: 14,
+                                                height: 48,
+                                                flexDirection: 'row',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                gap: 8,
+                                            }}
+                                            activeOpacity={0.85}
+                                        >
+                                            {submitting ? (
+                                                <ActivityIndicator size="small" color="#FFFFFF" />
+                                            ) : (
+                                                <>
+                                                    <Ionicons name="checkmark-circle-outline" size={20} color="#FFFFFF" />
+                                                    <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '700' }}>Kiểm tra</Text>
+                                                </>
+                                            )}
+                                        </TouchableOpacity>
+                                    </View>
+                                </TouchableOpacity>
                             </Animated.View>
                         </TouchableOpacity>
 
-                        {/* Next button */}
-                        <TouchableOpacity
-                            onPress={handleNext}
-                            className="mt-8 flex-row items-center gap-3 px-9 py-4 bg-gray-900 rounded-2xl"
-                            style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.18, shadowRadius: 14, elevation: 7 }}
-                            activeOpacity={0.85}
-                        >
-                            <Text className="text-base font-bold text-white">Tiếp theo</Text>
-                            <Ionicons name="chevron-forward" size={22} color="#FFFFFF" />
-                        </TouchableOpacity>
+                        {/* Hint when not flipped */}
+                        {!isFlipped && (
+                            <Text style={{ marginTop: 24, fontSize: 13, color: '#9CA3AF', fontStyle: 'italic' }}>
+                                Chạm vào thẻ để xem nghĩa và nhập từ vựng
+                            </Text>
+                        )}
                     </View>
                 ) : null}
             </View>

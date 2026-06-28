@@ -81,6 +81,7 @@ export interface UserProfile {
     totalQuizCompleted:    number;
     totalFlashcardLearned: number;
     lastStudyDate:         string | null;
+    avatarUrl?: string;
 }
 
 export interface ApiResponse<T = unknown> {

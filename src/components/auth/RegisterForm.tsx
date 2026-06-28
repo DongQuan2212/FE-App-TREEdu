@@ -1,7 +1,7 @@
 import React from 'react';
 import {
     StyleSheet, Text, View, TextInput,
-    TouchableOpacity, ActivityIndicator, ScrollView,
+    TouchableOpacity, ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { RegisterFormErrors } from '../../types/auth';
@@ -12,7 +12,6 @@ interface Props {
     password: string;
     rePassword: string;
     phoneNumber: string;
-    avatarUrl: string;
     birthYear: string;
     address: string;
     gender: 'MALE' | 'FEMALE' | 'OTHER';
@@ -20,12 +19,12 @@ interface Props {
     showRePassword: boolean;
     loading: boolean;
     errors: RegisterFormErrors;
+    avatarFileName?: string | null; // Cập nhật: Dùng để hiển thị tên ảnh
     onChangeFullName: (text: string) => void;
     onChangeEmail: (text: string) => void;
     onChangePassword: (text: string) => void;
     onChangeRePassword: (text: string) => void;
     onChangePhoneNumber: (text: string) => void;
-    onChangeAvatarUrl: (text: string) => void;
     onChangeBirthYear: (text: string) => void;
     onChangeAddress: (text: string) => void;
     onChangeGender: (gender: 'MALE' | 'FEMALE' | 'OTHER') => void;
@@ -33,6 +32,7 @@ interface Props {
     onToggleRePassword: () => void;
     onSubmit: () => void;
     onGoLogin: () => void;
+    onSelectAvatar: () => void; // Cập nhật: Hàm xử lý khi bấm nút chọn ảnh
 }
 
 const GENDER_OPTIONS: { label: string; value: 'MALE' | 'FEMALE' | 'OTHER' }[] = [
@@ -43,11 +43,11 @@ const GENDER_OPTIONS: { label: string; value: 'MALE' | 'FEMALE' | 'OTHER' }[] = 
 
 export default function RegisterForm({
                                          fullName, email, password, rePassword,
-                                         phoneNumber, avatarUrl, birthYear, address, gender,
-                                         showPassword, showRePassword, loading, errors,
+                                         phoneNumber, birthYear, address, gender,
+                                         showPassword, showRePassword, loading, errors, avatarFileName,
                                          onChangeFullName, onChangeEmail, onChangePassword, onChangeRePassword,
-                                         onChangePhoneNumber, onChangeAvatarUrl, onChangeBirthYear, onChangeAddress, onChangeGender,
-                                         onTogglePassword, onToggleRePassword, onSubmit, onGoLogin,
+                                         onChangePhoneNumber, onChangeBirthYear, onChangeAddress, onChangeGender,
+                                         onTogglePassword, onToggleRePassword, onSubmit, onGoLogin, onSelectAvatar
                                      }: Props) {
     return (
         <View style={styles.card}>
@@ -69,6 +69,7 @@ export default function RegisterForm({
                 placeholderTextColor="#B0C4A8"
                 value={fullName}
                 onChangeText={onChangeFullName}
+                editable={!loading}
             />
             {errors.fullName ? <Text style={styles.errorText}>{errors.fullName}</Text> : null}
 
@@ -82,6 +83,7 @@ export default function RegisterForm({
                 autoCapitalize="none"
                 value={email}
                 onChangeText={onChangeEmail}
+                editable={!loading}
             />
             {errors.email ? <Text style={styles.errorText}>{errors.email}</Text> : null}
 
@@ -95,8 +97,9 @@ export default function RegisterForm({
                     secureTextEntry={!showPassword}
                     value={password}
                     onChangeText={onChangePassword}
+                    editable={!loading}
                 />
-                <TouchableOpacity style={styles.eyeIcon} onPress={onTogglePassword}>
+                <TouchableOpacity style={styles.eyeIcon} onPress={onTogglePassword} disabled={loading}>
                     <Ionicons name={showPassword ? 'eye-outline' : 'eye-off-outline'} size={20} color="#9CB890" />
                 </TouchableOpacity>
             </View>
@@ -112,8 +115,9 @@ export default function RegisterForm({
                     secureTextEntry={!showRePassword}
                     value={rePassword}
                     onChangeText={onChangeRePassword}
+                    editable={!loading}
                 />
-                <TouchableOpacity style={styles.eyeIcon} onPress={onToggleRePassword}>
+                <TouchableOpacity style={styles.eyeIcon} onPress={onToggleRePassword} disabled={loading}>
                     <Ionicons name={showRePassword ? 'eye-outline' : 'eye-off-outline'} size={20} color="#9CB890" />
                 </TouchableOpacity>
             </View>
@@ -131,6 +135,7 @@ export default function RegisterForm({
                 keyboardType="phone-pad"
                 value={phoneNumber}
                 onChangeText={onChangePhoneNumber}
+                editable={!loading}
             />
             {errors.phoneNumber ? <Text style={styles.errorText}>{errors.phoneNumber}</Text> : null}
 
@@ -146,6 +151,7 @@ export default function RegisterForm({
                         maxLength={4}
                         value={birthYear}
                         onChangeText={onChangeBirthYear}
+                        editable={!loading}
                     />
                     {errors.birthYear ? <Text style={styles.errorText}>{errors.birthYear}</Text> : null}
                 </View>
@@ -158,6 +164,7 @@ export default function RegisterForm({
                                 key={opt.value}
                                 style={[styles.genderBtn, gender === opt.value && styles.genderBtnActive]}
                                 onPress={() => onChangeGender(opt.value)}
+                                disabled={loading}
                             >
                                 <Text style={[styles.genderBtnText, gender === opt.value && styles.genderBtnTextActive]}>
                                     {opt.label}
@@ -176,19 +183,26 @@ export default function RegisterForm({
                 placeholderTextColor="#B0C4A8"
                 value={address}
                 onChangeText={onChangeAddress}
+                editable={!loading}
             />
 
-            {/* Link ảnh đại diện */}
-            <Text style={styles.label}>Link ảnh đại diện (URL)</Text>
-            <TextInput
-                style={styles.input}
-                placeholder="https://example.com/avatar.jpg"
-                placeholderTextColor="#B0C4A8"
-                autoCapitalize="none"
-                keyboardType="url"
-                value={avatarUrl}
-                onChangeText={onChangeAvatarUrl}
-            />
+            {/* ── Nút Chọn ảnh đại diện ── */}
+            <Text style={styles.label}>Ảnh đại diện</Text>
+            <TouchableOpacity
+                style={[
+                    styles.avatarBtn,
+                    avatarFileName ? styles.avatarBtnActive : null
+                ]}
+                onPress={onSelectAvatar}
+                disabled={loading}
+            >
+                <Text style={[
+                    styles.avatarBtnText,
+                    avatarFileName ? styles.avatarBtnTextActive : null
+                ]}>
+                    {avatarFileName ? `✓ ${avatarFileName}` : "📷 Chọn ảnh đại diện"}
+                </Text>
+            </TouchableOpacity>
 
             {/* Nút Đăng Ký */}
             <TouchableOpacity
@@ -206,7 +220,7 @@ export default function RegisterForm({
             {/* Footer */}
             <View style={styles.footer}>
                 <Text style={styles.footerText}>Đã có tài khoản? </Text>
-                <TouchableOpacity onPress={onGoLogin}>
+                <TouchableOpacity onPress={onGoLogin} disabled={loading}>
                     <Text style={styles.loginText}>Đăng nhập ngay</Text>
                 </TouchableOpacity>
             </View>
@@ -341,13 +355,36 @@ const styles = StyleSheet.create({
         color: '#7CB342',
         fontWeight: '700',
     },
+    avatarBtn: {
+        height: 50,
+        borderWidth: 1.5,
+        borderColor: '#E0E0E0',
+        borderRadius: 12,
+        backgroundColor: '#FAFAFA',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 16, // Khoảng cách tới nút Đăng Ký
+    },
+    avatarBtnActive: {
+        borderColor: '#4CAF50',
+        backgroundColor: '#E8F5E9',
+    },
+    avatarBtnText: {
+        fontSize: 14,
+        color: '#666666',
+        fontWeight: '500',
+    },
+    avatarBtnTextActive: {
+        color: '#2E7D32',
+        fontWeight: '600',
+    },
     registerButton: {
         backgroundColor: '#7CB342',
         height: 50,
         borderRadius: 14,
         justifyContent: 'center',
         alignItems: 'center',
-        marginTop: 20,
+        marginTop: 10,
         shadowColor: '#7CB342',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.30,

@@ -22,6 +22,7 @@ export const API_ENDPOINTS = {
     leaderboardWeekly: `${API_BASE_URL}/leaderboard/weekly-xp`,
     leaderboardStreak: `${API_BASE_URL}/leaderboard/streak`,
     leaderboardTotal:  `${API_BASE_URL}/leaderboard/total-xp`,
+    flashcardHistory: `${API_BASE_URL}/flashcards/learn`,
     myTree: `${API_BASE_URL}/tree/my-tree`,
     waterTree: `${API_BASE_URL}/tree/water`,
     treeHistory: `${API_BASE_URL}/tree/history`,
@@ -30,4 +31,8 @@ export const API_ENDPOINTS = {
     dictationList: `${API_BASE_URL}/dictation`,
     dictationDetail: (id: string) => `${API_BASE_URL}/dictation/${id}`,
     dictationCheck: (id: string) => `${API_BASE_URL}/dictation/${id}/check`,
+    myNotifications:   `${API_BASE_URL}/notifications`,
+    unreadNotifCount:  `${API_BASE_URL}/notifications/unread-count`,
+    markNotifRead:     (id: string) => `${API_BASE_URL}/notifications/${id}/read`,
+    markAllNotifRead:  `${API_BASE_URL}/notifications/read-all`,
 };

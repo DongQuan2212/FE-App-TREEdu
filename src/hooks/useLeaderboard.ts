@@ -10,8 +10,11 @@ export interface LeaderboardEntry {
     level:       number;
     treeStage:   string | null;
     change:      number;
-}
 
+    // 👇 THÊM 2 DÒNG NÀY VÀO LÀ HẾT LỖI 👇
+    avatarUrl?:  string;
+    isMe?:       boolean;
+}
 interface LeaderboardResponse {
     entries: LeaderboardEntry[];
     myRank?: number;
